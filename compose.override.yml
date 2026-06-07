@@ -38,7 +38,7 @@ services:
           ignore:
             - ./backend/.venv
             - .venv
-        - path: ./backend/pyproject.toml
+        - path: ./requirements.txt
           action: rebuild
     # TODO: remove once coverage is done locally
     volumes:

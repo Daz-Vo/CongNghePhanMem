@@ -54,10 +54,13 @@ class Neo4jRepository:
         try:
             self._ensure_driver()
             logger.info(f"Executing Neo4j READ query: {query}")
-            logger.debug(f"Parameters: {params}")
+            
+            def _read_tx(tx):
+                result = tx.run(query, **params)
+                return [record.data() for record in result]
+
             with self._driver.session(database=settings.NEO4J_DATABASE) as session:
-                result = session.run(query, **params)
-                records = [record.data() for record in result]
+                records = session.execute_read(_read_tx)
                 logger.info(f"Neo4j read result count: {len(records)}")
                 return records
         except Neo4jError as error:
@@ -73,10 +76,13 @@ class Neo4jRepository:
         try:
             self._ensure_driver()
             logger.info(f"Executing Neo4j WRITE query: {query}")
-            logger.debug(f"Parameters: {params}")
+            
+            def _write_tx(tx):
+                result = tx.run(query, **params)
+                return [record.data() for record in result]
+
             with self._driver.session(database=settings.NEO4J_DATABASE) as session:
-                result = session.run(query, **params)
-                records = [record.data() for record in result]
+                records = session.execute_write(_write_tx)
                 logger.info(f"Neo4j write result count: {len(records)}")
                 return records
         except Neo4jError as error:

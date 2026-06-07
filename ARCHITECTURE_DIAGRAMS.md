@@ -12,7 +12,7 @@
    │  PostgreSQL  │      │   Neo4j      │      │   Adminer    │
    │  (Port 5432) │      │ (Port 7687)  │      │ (Port 8080)  │
    │              │      │              │      │              │
-   │  ✅ Health   │      │ ❌ No Health │      │              │
+   │  ✅ Health   │      │ ✅ Health    │      │              │
    │  Check       │      │ Check        │      │              │
    └──────────────┘      └──────────────┘      └──────────────┘
         │                      │
@@ -187,7 +187,7 @@ Time  Component      Action                          Status
 0s    Neo4j          docker run neo4j:5
 5s    Neo4j          Loading database...
 15s   Neo4j          Ready for connections READY! ✅
-                     (but no health check to verify)
+                     (health check verified via wget)
 
 0s    Adminer        docker run adminer
 2s    Adminer        Ready ✅
@@ -345,10 +345,10 @@ Docker Compose Health Checks:
 └─────────────────┘
 
 ┌─────────────────┐
-│  Neo4j          │  Status: ❌ 'unknown' (no check!)
+│  Neo4j          │  Status: ✅ 'healthy'
 ├─────────────────┤
-│ No check        │  ⚠️ SHOULD HAVE:
-│ (missing!)      │     curl http://localhost:7474/.../exec
+│ wget check      │  Interval: 10s, Retries: 10
+│ on port 7474    │  (as defined in compose.yml)
 └─────────────────┘
 
 ┌─────────────────┐
@@ -372,8 +372,9 @@ Service Start Order Enforcement:
 ├─ start neo4j ─→ (wait started) ─→ start backend
 └─ start frontend ─→ (no dependencies)
 
-⚠️ Issue: backend depends on neo4j "started" (not "healthy")
-        Could still be initializing when backend tries to connect!
+✅ Status: backend depends on neo4j "service_healthy"
+        Ensures database is ready before API starts.
+────────────────────────────────────────────────────────────────
 ```
 
 ---
