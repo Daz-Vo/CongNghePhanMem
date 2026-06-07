@@ -18,15 +18,15 @@ class DiseaseLookupService:
     def __init__(self):
         self._repository = disease_repository
 
-    def search_diseases(self, query: str, limit: int = 10) -> DiseaseSearchResponse:
+    def search_diseases(self, query: str, limit: int = 10, skip: int = 0) -> DiseaseSearchResponse:
         """
         Search for diseases by name or description.
         Returns a DiseaseSearchResponse with matching diseases.
         """
-        logger.info(f"Searching diseases with query: '{query}', limit: {limit}")
+        logger.info(f"Searching diseases with query: '{query}', limit: {limit}, skip: {skip}")
 
         try:
-            results = self._repository.search_diseases(query, limit=limit)
+            results = self._repository.search_diseases(query, limit=limit, skip=skip)
 
             diseases = [
                 DiseaseResponse(
@@ -69,15 +69,15 @@ class DiseaseLookupService:
             return None
 
     def get_treating_drugs(
-        self, disease_name: str, limit: int = 10
+        self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
         Get drugs that treat a specific disease.
         """
-        logger.info(f"Fetching treating drugs for disease: '{disease_name}'")
+        logger.info(f"Fetching treating drugs for disease: '{disease_name}', limit: {limit}, skip: {skip}")
 
         try:
-            drugs = self._repository.get_treating_drugs(disease_name, limit=limit)
+            drugs = self._repository.get_treating_drugs(disease_name, limit=limit, skip=skip)
             logger.info(f"Found {len(drugs)} treating drugs for disease '{disease_name}'")
             return drugs
 

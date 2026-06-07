@@ -1,7 +1,7 @@
 import logging
 import json
 import time
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
 from app.services.ner_service import ner_service
@@ -94,7 +94,7 @@ class ChatService:
         
         return "", [], []
 
-    async def process_chat(self, db: Session, user_id: int, message: str) -> ChatMessageResponse:
+    async def process_chat(self, db: Session, user_id: Optional[int], message: str) -> ChatMessageResponse:
         start_time = time.time()
         try:
             # 1. Language Detection
@@ -117,15 +117,16 @@ class ChatService:
             answer = await llm_service.generate_response(message, context)
             
             # 5. Update History
-            chat_record = ChatHistory(
-                user_id=user_id,
-                message=message,
-                response=answer,
-                intent=intent,
-                entities=",".join(all_entity_names)
-            )
-            db.add(chat_record)
-            db.commit()
+            if user_id is not None:
+                chat_record = ChatHistory(
+                    user_id=user_id,
+                    message=message,
+                    response=answer,
+                    intent=intent,
+                    entities=",".join(all_entity_names)
+                )
+                db.add(chat_record)
+                db.commit()
             
             process_time = time.time() - start_time
             logger.info(f"Chat processing completed in {process_time:.2f}s | Lang: {lang} | Source: {sources or 'LLM Knowledge'}")

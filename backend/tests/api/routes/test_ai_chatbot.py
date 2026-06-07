@@ -8,13 +8,16 @@ from app.core.config import settings
 
 client = TestClient(app)
 
-def test_chat_interaction_no_auth():
-    """Test that chat requires authentication."""
+@patch("app.services.llm_service.llm_service.generate_response")
+def test_chat_interaction_no_auth(mock_llm):
+    """Test that chat works without authentication (anonymous)."""
+    mock_llm.return_value = "Phản hồi cho người dùng ẩn danh."
     response = client.post(
         f"{settings.API_V1_STR}/chat/",
         json={"message": "Paradol có tác dụng gì?"}
     )
-    assert response.status_code == 401
+    assert response.status_code == 200
+    assert "answer" in response.json()
 
 @patch("app.services.llm_service.llm_service.generate_response")
 @patch("app.services.ner_service.ner_service.extract_entities")
@@ -153,3 +156,42 @@ def test_chat_multilingual_es(mock_llm, mock_lang, client: TestClient, superuser
     
     response = client.post(f"{settings.API_V1_STR}/chat/", headers=superuser_token_headers, json={"message": "Hola"})
     assert "Hola" in response.json()["answer"]
+@patch("app.services.llm_service.llm_service.generate_response")
+def test_chat_anonymous_no_history(mock_llm, db: Session):
+    """Test that anonymous chat does not save history."""
+    from app.models.chat import ChatHistory
+    
+    mock_llm.return_value = "Anonymous response"
+    count_before = db.query(ChatHistory).count()
+    
+    response = client.post(
+        f"{settings.API_V1_STR}/chat/",
+        json={"message": "Anonymous question"}
+    )
+    
+    assert response.status_code == 200
+    count_after = db.query(ChatHistory).count()
+    assert count_before == count_after
+
+@patch("app.services.llm_service.llm_service.generate_response")
+def test_chat_authenticated_saves_history(
+    mock_llm, 
+    client: TestClient, 
+    superuser_token_headers: dict, 
+    db: Session
+):
+    """Test that authenticated chat saves history."""
+    from app.models.chat import ChatHistory
+    
+    mock_llm.return_value = "Authenticated response"
+    count_before = db.query(ChatHistory).count()
+    
+    response = client.post(
+        f"{settings.API_V1_STR}/chat/",
+        headers=superuser_token_headers,
+        json={"message": "Authenticated question"}
+    )
+    
+    assert response.status_code == 200
+    count_after = db.query(ChatHistory).count()
+    assert count_after == count_before + 1

@@ -111,15 +111,15 @@ class FavoriteDrugService:
             }
 
     def get_favorites(
-        self, user_id: int, limit: int = 50
+        self, user_id: int, limit: int = 50, skip: int = 0
     ) -> FavoritesDrugListResponse:
         """
         Get all favorite drugs for a user.
         """
-        logger.info(f"Fetching favorites for user {user_id}")
+        logger.info(f"Fetching favorites for user {user_id}, limit: {limit}, skip: {skip}")
 
         try:
-            results = self._fav_repository.get_user_favorites(user_id, limit=limit)
+            results = self._fav_repository.get_user_favorites(user_id, limit=limit, skip=skip)
 
             items = [
                 FavoriteDrugItem(

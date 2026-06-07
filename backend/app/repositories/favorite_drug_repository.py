@@ -82,7 +82,7 @@ class FavoriteDrugRepository:
             return False
 
     def get_user_favorites(
-        self, user_id: int, limit: int = 50
+        self, user_id: int, limit: int = 50, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
         Get all favorite drugs for a user.
@@ -97,6 +97,7 @@ class FavoriteDrugRepository:
             d.purpose AS purpose,
             r.notes AS notes,
             r.created_at AS added_at
+        SKIP $skip
         LIMIT $limit
         """
         try:
@@ -104,6 +105,7 @@ class FavoriteDrugRepository:
                 query,
                 user_id=user_id,
                 limit=limit,
+                skip=skip,
             )
             return results if results else []
         except Exception as exc:

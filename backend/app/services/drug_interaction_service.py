@@ -18,15 +18,15 @@ class DrugInteractionService:
     def __init__(self):
         self._repository = drug_repository
 
-    def get_drug_interactions(self, drug_name: str) -> list[dict[str, Any]]:
+    def get_drug_interactions(self, drug_name: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
         Get all drugs that interact with a specific drug.
         Returns list of interactions with severity and description.
         """
-        logger.info(f"Fetching interactions for drug: '{drug_name}'")
+        logger.info(f"Fetching interactions for drug: '{drug_name}', limit: {limit}, skip: {skip}")
 
         try:
-            interactions = self._repository.get_drug_interactions(drug_name)
+            interactions = self._repository.get_drug_interactions(drug_name, limit=limit, skip=skip)
             logger.info(
                 f"Found {len(interactions)} drugs that interact with '{drug_name}'"
             )

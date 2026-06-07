@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -8,11 +9,17 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import ALGORITHM
 from app.db.session import SessionLocal
+from app.models.user import User
 from app.repositories import user_repository
 from app.schemas.token import TokenPayload
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login/access-token"
+)
+
+reusable_oauth2_optional = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login/access-token",
+    auto_error=False
 )
 
 
@@ -43,4 +50,22 @@ def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    return user
+
+
+def get_optional_current_user(
+    db: Session = Depends(get_db),
+    token: str | None = Depends(reusable_oauth2_optional),
+) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        token_data = TokenPayload(**payload)
+    except (JWTError, Exception):
+        return None
+
+    user = user_repository.get_user_by_id(db, user_id=int(token_data.sub))
+    if not user or not user.is_active:
+        return None
     return user

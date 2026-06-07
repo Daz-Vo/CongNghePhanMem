@@ -16,6 +16,8 @@ router = APIRouter(prefix="/interactions", tags=["interactions"])
 @router.get("/{drug_name}")
 def get_drug_interactions(
     drug_name: str = Path(..., description="Drug name"),
+    limit: int = Query(20, ge=1, le=100, description="Max results"),
+    skip: int = Query(0, ge=0, description="Number of results to skip"),
 ):
     """
     Get all known interactions for a specific drug.
@@ -25,9 +27,9 @@ def get_drug_interactions(
     Returns list of drugs that interact with the specified drug,
     including severity level and description of the interaction.
     """
-    logger.info(f"GET /api/v1/interactions/{drug_name}")
+    logger.info(f"GET /api/v1/interactions/{drug_name}?limit={limit}&skip={skip}")
     try:
-        interactions = drug_interaction_service.get_drug_interactions(drug_name)
+        interactions = drug_interaction_service.get_drug_interactions(drug_name, limit=limit, skip=skip)
         if not interactions:
             return {
                 "drug_name": drug_name,
