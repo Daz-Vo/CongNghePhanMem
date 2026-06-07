@@ -14,4 +14,4 @@ def init_db(session: Session) -> None:
             email=settings.FIRST_SUPERUSER,
             password=settings.FIRST_SUPERUSER_PASSWORD,
         )
-        create_user(session, user_in)
+        create_user(session, user_in, is_superuser=True)
