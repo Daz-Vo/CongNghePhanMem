@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from typing import Optional
+from typing import Optional, Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer

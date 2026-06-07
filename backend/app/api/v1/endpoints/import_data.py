@@ -19,7 +19,7 @@ def import_openfda(
     Features:
     - Imports drug nodes with name, brand name, generic name, dosage, warnings, etc.
     - Creates Ingredient nodes and CONTAINS relationships
-    - Creates Manufacturer nodes and PRODUCES relationships
+    - Creates Manufacturer nodes and MADE_BY relationships
     - Extracts diseases from indications and creates TREATS relationships
     - Handles retry on transient API failures
     - Rate limiting and proper pagination

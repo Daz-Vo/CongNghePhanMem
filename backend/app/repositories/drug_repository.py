@@ -24,7 +24,7 @@ class DrugRepository:
         query = """
         MATCH (d:Drug {name: $name})
         OPTIONAL MATCH (d)-[:CONTAINS]->(i:Ingredient)
-        OPTIONAL MATCH (m:Manufacturer)-[:PRODUCES]->(d)
+        OPTIONAL MATCH (d)-[:MADE_BY]->(m:Manufacturer)
         OPTIONAL MATCH (d)-[int:INTERACTS_WITH]->(d2:Drug)
         RETURN 
             d.name AS name,
