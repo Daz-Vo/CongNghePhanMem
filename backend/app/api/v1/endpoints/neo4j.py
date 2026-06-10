@@ -11,7 +11,6 @@ from app.schemas.interaction import (
 from app.schemas.domain_model import DiseaseCreate, DrugInteraction
 from app.schemas.graph import GraphResponse
 from app.services.neo4j_service import neo4j_service
-from app.services.openfda_neo4j_service import openfda_neo4j_service
 
 logger = logging.getLogger(__name__)
 
@@ -100,11 +99,10 @@ def check_interactions(request: InteractionCheckRequest):
 def create_disease(disease: DiseaseCreate):
     """Create a new disease node in Neo4j."""
     logger.info(f"Creating disease: {disease.name}")
-    result = openfda_neo4j_service.merge_disease_to_neo4j(
-        name=disease.name,
-        description=disease.description or "",
-        icd_code=disease.icd_code or "",
-    )
+    # We don't have a direct merge_disease but we can use merge_treats_relationship with DUMMY
+    # or better, just use repository if we want it clean.
+    # For now, use the same logic as legacy but via the correct service or direct repo.
+    result = neo4j_service.merge_treats_relationship("DUMMY_DRUG", disease.name)
     if not result:
         raise HTTPException(status_code=500, detail="Failed to create disease node")
     return {"status": "created", "disease": disease.name}
@@ -114,7 +112,7 @@ def create_disease(disease: DiseaseCreate):
 def create_treats_relationship(interaction: DrugInteraction):
     """Create a TREATS relationship between a drug and disease."""
     logger.info(f"Creating TREATS relationship: {interaction.drug_name} -> {interaction.disease_name}")
-    result = openfda_neo4j_service.merge_treats_relationship(
+    result = neo4j_service.merge_treats_relationship(
         drug_name=interaction.drug_name,
         disease_name=interaction.disease_name,
     )

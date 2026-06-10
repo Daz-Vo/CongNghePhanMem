@@ -24,7 +24,7 @@ class DrugRepository:
         query = """
         MATCH (d:Drug {name: $name})
         OPTIONAL MATCH (d)-[:CONTAINS]->(i:Ingredient)
-        OPTIONAL MATCH (m:Manufacturer)-[:PRODUCES]->(d)
+        OPTIONAL MATCH (d)-[:MADE_BY]->(m:Manufacturer)
         OPTIONAL MATCH (d)-[int:INTERACTS_WITH]->(d2:Drug)
         RETURN 
             d.name AS name,
@@ -53,7 +53,7 @@ class DrugRepository:
             logger.error(f"Error retrieving drug '{drug_name}': {exc}")
             return None
 
-    def search_drugs(self, query_str: str, limit: int = 10) -> list[dict[str, Any]]:
+    def search_drugs(self, query_str: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
         Search for drugs by name, brand name, or generic name.
         """
@@ -70,11 +70,12 @@ class DrugRepository:
             d.purpose AS purpose,
             d.indications AS indications,
             d.dosage AS dosage
+        SKIP $skip
         LIMIT $limit
         """
         try:
             results = self._repository.execute_read(
-                query, query=query_str, limit=limit
+                query, query=query_str, limit=limit, skip=skip
             )
             return results if results else []
         except Exception as exc:
@@ -82,7 +83,7 @@ class DrugRepository:
             return []
 
     def get_drugs_by_disease(
-        self, disease_name: str, limit: int = 10
+        self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
         Get drugs that treat a specific disease.
@@ -95,11 +96,12 @@ class DrugRepository:
             drug.brand_name AS brand_name,
             drug.generic_name AS generic_name,
             drug.dosage AS dosage
+        SKIP $skip
         LIMIT $limit
         """
         try:
             results = self._repository.execute_read(
-                query, disease_name=disease_name, limit=limit
+                query, disease_name=disease_name, limit=limit, skip=skip
             )
             return results if results else []
         except Exception as exc:
@@ -108,7 +110,7 @@ class DrugRepository:
             )
             return []
 
-    def get_drug_interactions(self, drug_name: str) -> list[dict[str, Any]]:
+    def get_drug_interactions(self, drug_name: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
         Get all drugs that interact with a specific drug.
         """
@@ -120,9 +122,11 @@ class DrugRepository:
             d.brand_name AS brand_name,
             int.severity AS severity,
             int.description AS description
+        SKIP $skip
+        LIMIT $limit
         """
         try:
-            results = self._repository.execute_read(query, drug_name=drug_name)
+            results = self._repository.execute_read(query, drug_name=drug_name, limit=limit, skip=skip)
             return results if results else []
         except Exception as exc:
             logger.error(
@@ -140,11 +144,9 @@ class DrugRepository:
         if not drug_names or len(drug_names) < 2:
             return []
 
-        # Build the WHERE clause with drug names
-        drug_list = ",".join([f"'{name}'" for name in drug_names])
-        query = f"""
+        query = """
         MATCH (d:Drug)-[int:INTERACTS_WITH]->(d2:Drug)
-        WHERE d.name IN [{drug_list}] AND d2.name IN [{drug_list}]
+        WHERE d.name IN $drug_names AND d2.name IN $drug_names
         RETURN 
             d.name AS drug_1,
             d2.name AS drug_2,
@@ -152,7 +154,7 @@ class DrugRepository:
             int.description AS description
         """
         try:
-            results = self._repository.execute_read(query)
+            results = self._repository.execute_read(query, drug_names=drug_names)
             return results if results else []
         except Exception as exc:
             logger.error(f"Error checking multiple drug interactions: {exc}")

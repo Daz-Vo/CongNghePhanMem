@@ -107,10 +107,10 @@ class Settings(BaseSettings):
     LLM_MAX_RETRIES: int = 3
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
-        if value == "changethis":
+        if value in ["changethis", "", None, "your-super-secret-key-change-in-production"]:
             message = (
-                f'The value of {var_name} is "changethis", '
-                "for security, please change it, at least for deployments."
+                f'The value of {var_name} is "{value}", '
+                "for security, please change it to a strong secret, at least for deployments."
             )
             if self.ENVIRONMENT == "local":
                 warnings.warn(message, stacklevel=1)
@@ -121,6 +121,7 @@ class Settings(BaseSettings):
     def _enforce_non_default_secrets(self) -> Self:
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
+        self._check_default_secret("NEO4J_PASSWORD", self.NEO4J_PASSWORD)
         self._check_default_secret(
             "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
         )

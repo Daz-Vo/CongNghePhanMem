@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException
-from typing import Any
+from fastapi import APIRouter, HTTPException, Depends
+from typing import Any, Annotated
 
+from app.api.v1.endpoints.deps import get_current_active_superuser
+from app.models.user import User
 from app.services.neo4j_service import neo4j_service
 
 from app.repositories.neo4j_repository import neo4j_repository
@@ -11,7 +13,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/debug", tags=["debug"])
 
 @router.get("/drugs")
-def get_all_drugs_debug() -> Any:
+def get_all_drugs_debug(
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+) -> Any:
     """
     Directly query Neo4j to see what drugs are visible.
     """
@@ -20,7 +24,10 @@ def get_all_drugs_debug() -> Any:
     return results
 
 @router.get("/drug/{name}")
-def get_drug_debug(name: str) -> Any:
+def get_drug_debug(
+    name: str,
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+) -> Any:
     """
     Debug endpoint to directly test Neo4j drug retrieval.
     """
@@ -36,7 +43,10 @@ def get_drug_debug(name: str) -> Any:
     }
 
 @router.get("/disease/{name}")
-def get_disease_debug(name: str) -> Any:
+def get_disease_debug(
+    name: str,
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+) -> Any:
     """
     Debug endpoint to directly test Neo4j disease retrieval.
     """

@@ -40,7 +40,7 @@ class DiseaseRepository:
             logger.error(f"Error retrieving disease '{disease_name}': {exc}")
             return None
 
-    def search_diseases(self, query_str: str, limit: int = 10) -> list[dict[str, Any]]:
+    def search_diseases(self, query_str: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
         Search for diseases by name or description.
         """
@@ -52,11 +52,12 @@ class DiseaseRepository:
             d.name AS name,
             d.description AS description,
             d.icd_code AS icd_code
+        SKIP $skip
         LIMIT $limit
         """
         try:
             results = self._repository.execute_read(
-                query, query=query_str, limit=limit
+                query, query=query_str, limit=limit, skip=skip
             )
             return results if results else []
         except Exception as exc:
@@ -64,7 +65,7 @@ class DiseaseRepository:
             return []
 
     def get_treating_drugs(
-        self, disease_name: str, limit: int = 10
+        self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
         Get drugs that treat a specific disease.
@@ -77,11 +78,12 @@ class DiseaseRepository:
             drug.brand_name AS brand_name,
             drug.generic_name AS generic_name,
             drug.dosage AS dosage
+        SKIP $skip
         LIMIT $limit
         """
         try:
             results = self._repository.execute_read(
-                query, disease_name=disease_name, limit=limit
+                query, disease_name=disease_name, limit=limit, skip=skip
             )
             return results if results else []
         except Exception as exc:

@@ -110,13 +110,15 @@ def remove_from_favorites(
 @router.get("/list", response_model=FavoritesDrugListResponse)
 def get_favorites(
     current_user: Annotated[User, Depends(get_current_user)],
+    limit: int = 20,
+    skip: int = 0
 ):
     """
     Get all favorite drugs for current user.
     """
-    logger.info(f"GET /api/v1/favorites/list - user_id={current_user.id}")
+    logger.info(f"GET /api/v1/favorites/list - user_id={current_user.id}, limit={limit}, skip={skip}")
     try:
-        return favorite_drug_service.get_favorites(current_user.id)
+        return favorite_drug_service.get_favorites(current_user.id, limit=limit, skip=skip)
     except Exception as exc:
         logger.exception(f"Error fetching favorites: {exc}")
         raise HTTPException(

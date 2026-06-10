@@ -7,7 +7,6 @@ from urllib3.util.retry import Retry
 
 from app.core.config import settings
 from app.services.neo4j_service import neo4j_service
-from app.services.openfda_neo4j_service import openfda_neo4j_service
 
 logger = logging.getLogger(__name__)
 
@@ -198,9 +197,6 @@ def import_openfda_drugs(limit: int = 10, skip: int = 0) -> int:
         except Exception as exc:
             logger.error(f"Error processing drug {idx}: {exc}")
 
-    # Stats sync
-    openfda_neo4j_service.verify_drug_count() 
-    
     return imported
 
 

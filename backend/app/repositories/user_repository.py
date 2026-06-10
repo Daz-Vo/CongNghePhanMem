@@ -15,13 +15,14 @@ def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
     return db.query(User).filter(User.id == user_id).first()
 
 
-def create_user(db: Session, user_in: UserCreate) -> User:
+def create_user(db: Session, user_in: UserCreate, is_superuser: bool = False) -> User:
     hashed_password = get_password_hash(user_in.password)
     db_user = User(
         email=user_in.email,
         hashed_password=hashed_password,
         full_name=user_in.full_name,
-        is_active=True,
+        is_active=user_in.is_active,
+        is_superuser=is_superuser,
     )
     db.add(db_user)
     db.commit()

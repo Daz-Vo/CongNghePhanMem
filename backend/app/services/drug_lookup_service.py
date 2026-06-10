@@ -18,15 +18,15 @@ class DrugLookupService:
     def __init__(self):
         self._repository = drug_repository
 
-    def search_drugs(self, query: str, limit: int = 10) -> DrugSearchResponse:
+    def search_drugs(self, query: str, limit: int = 10, skip: int = 0) -> DrugSearchResponse:
         """
         Search for drugs by name, brand name, or generic name.
         Returns a DrugSearchResponse with matching drugs.
         """
-        logger.info(f"Searching drugs with query: '{query}', limit: {limit}")
+        logger.info(f"Searching drugs with query: '{query}', limit: {limit}, skip: {skip}")
 
         try:
-            results = self._repository.search_drugs(query, limit=limit)
+            results = self._repository.search_drugs(query, limit=limit, skip=skip)
             
             drugs = [
                 DrugResponse(
@@ -119,15 +119,15 @@ class DrugLookupService:
             return []
 
     def get_drugs_by_disease(
-        self, disease_name: str, limit: int = 10
+        self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> DrugSearchResponse:
         """
         Get drugs that treat a specific disease.
         """
-        logger.info(f"Fetching drugs for disease: '{disease_name}'")
+        logger.info(f"Fetching drugs for disease: '{disease_name}', limit: {limit}, skip: {skip}")
 
         try:
-            results = self._repository.get_drugs_by_disease(disease_name, limit=limit)
+            results = self._repository.get_drugs_by_disease(disease_name, limit=limit, skip=skip)
 
             drugs = [
                 DrugResponse(

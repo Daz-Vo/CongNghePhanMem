@@ -17,16 +17,18 @@ router = APIRouter(prefix="/drugs", tags=["drugs"])
 def search_drugs(
     q: str = Query(..., min_length=1, max_length=255, description="Search query"),
     limit: int = Query(10, ge=1, le=100, description="Max results"),
+    skip: int = Query(0, ge=0, description="Number of results to skip"),
 ):
     """
     Search for drugs by name, brand name, or generic name.
     
     - **q**: Search query (required)
     - **limit**: Maximum number of results (default: 10, max: 100)
+    - **skip**: Number of results to skip (default: 0)
     """
-    logger.info(f"GET /api/v1/drugs/search?q={q}&limit={limit}")
+    logger.info(f"GET /api/v1/drugs/search?q={q}&limit={limit}&skip={skip}")
     try:
-        return drug_lookup_service.search_drugs(query=q, limit=limit)
+        return drug_lookup_service.search_drugs(query=q, limit=limit, skip=skip)
     except Exception as exc:
         logger.exception(f"Error searching drugs: {exc}")
         raise HTTPException(
@@ -97,13 +99,14 @@ def get_drug_ingredients(
 def get_drugs_for_disease(
     disease_name: str = Path(..., description="Disease name"),
     limit: int = Query(10, ge=1, le=100, description="Max results"),
+    skip: int = Query(0, ge=0, description="Number of results to skip"),
 ):
     """
     Get drugs that treat a specific disease.
     """
-    logger.info(f"GET /api/v1/drugs/for-disease/{disease_name}?limit={limit}")
+    logger.info(f"GET /api/v1/drugs/for-disease/{disease_name}?limit={limit}&skip={skip}")
     try:
-        return drug_lookup_service.get_drugs_by_disease(disease_name, limit=limit)
+        return drug_lookup_service.get_drugs_by_disease(disease_name, limit=limit, skip=skip)
     except Exception as exc:
         logger.exception(f"Error getting drugs for disease: {exc}")
         raise HTTPException(
