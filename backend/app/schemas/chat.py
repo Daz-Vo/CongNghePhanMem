@@ -25,3 +25,10 @@ class ChatHistoryItem(BaseModel):
 class ChatHistoryList(BaseModel):
     total: int
     items: List[ChatHistoryItem]
+
+
+class AILogResponse(BaseModel):
+    total: int
+    items: List[ChatHistoryItem]
+    page: int
+    limit: int

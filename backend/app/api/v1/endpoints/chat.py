@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 from app.api.v1.endpoints.deps import get_db, get_current_user, get_optional_current_user
 from app.models.user import User
 from app.services.chat_service import chat_service
-from app.schemas.chat import ChatMessageRequest, ChatMessageResponse, ChatHistoryList
+from app.schemas.chat import ChatMessageRequest, ChatMessageResponse, ChatHistoryList, ChatHistoryItem
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -33,3 +33,18 @@ def get_chat_history(
     """
     history = chat_service.get_user_history(db, current_user.id, limit=limit)
     return ChatHistoryList(total=len(history), items=history)
+
+@router.get("/history/{id}", response_model=ChatHistoryItem)
+def get_chat_detail(
+    id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Retrieve a specific chat history entry.
+    """
+    from fastapi import HTTPException
+    chat = chat_service.get_chat_detail(db, id, current_user.id)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat history not found")
+    return chat

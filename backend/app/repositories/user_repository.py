@@ -46,3 +46,38 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     if not verify_password(password, user.hashed_password):
         return None
     return user
+
+
+def get_users(db: Session, limit: int = 100, skip: int = 0):
+    return db.query(User).offset(skip).limit(limit).all()
+
+
+def update_user_role(db: Session, user_id: int, is_superuser: bool) -> Optional[User]:
+    user = get_user_by_id(db, user_id)
+    if user:
+        user.is_superuser = is_superuser
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+def update_user_status(db: Session, user_id: int, is_active: bool) -> Optional[User]:
+    user = get_user_by_id(db, user_id)
+    if user:
+        user.is_active = is_active
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+def get_user_stats(db: Session):
+    total_users = db.query(User).count()
+    active_users = db.query(User).filter(User.is_active.is_(True)).count()
+    superusers = db.query(User).filter(User.is_superuser.is_(True)).count()
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "superusers": superusers
+    }

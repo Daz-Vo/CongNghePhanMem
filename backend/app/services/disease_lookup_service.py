@@ -67,7 +67,7 @@ class DiseaseLookupService:
                 name=disease.get("name", ""),
                 description=disease.get("description"),
                 symptoms=symptoms,
-                treating_drugs=disease.get("treating_drugs") or []
+                treating_medicines=disease.get("treating_medicines") or []
             )
 
             logger.info(f"Successfully fetched details for disease '{disease_name}'")
@@ -77,24 +77,37 @@ class DiseaseLookupService:
             logger.error(f"Error getting disease detail for '{disease_name}': {exc}")
             return None
 
-    def get_treating_drugs(
+    def get_treating_medicines(
         self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
-        Get drugs that treat a specific disease.
+        Get medicines that treat a specific disease.
         """
-        logger.info(f"Fetching treating drugs for disease: '{disease_name}', limit: {limit}, skip: {skip}")
+        logger.info(f"Fetching treating medicines for disease: '{disease_name}', limit: {limit}, skip: {skip}")
 
         try:
-            drugs = self._repository.get_treating_drugs(disease_name, limit=limit, skip=skip)
-            logger.info(f"Found {len(drugs)} treating drugs for disease '{disease_name}'")
-            return drugs
+            medicines = self._repository.get_treating_medicines(disease_name, limit=limit, skip=skip)
+            logger.info(f"Found {len(medicines)} treating medicines for disease '{disease_name}'")
+            return medicines
 
         except Exception as exc:
             logger.error(
-                f"Error getting treating drugs for disease '{disease_name}': {exc}"
+                f"Error getting treating medicines for disease '{disease_name}': {exc}"
             )
             return []
+
+
+    def delete_disease(self, name: str) -> bool:
+        """Admin: Delete a disease."""
+        return self._repository.delete_disease(name)
+
+    def create_disease(self, data: dict[str, Any]) -> dict[str, Any] | None:
+        """Admin: Create a new disease."""
+        return self._repository.create_disease(data)
+
+    def update_disease(self, name: str, data: dict[str, Any]) -> dict[str, Any] | None:
+        """Admin: Update a disease."""
+        return self._repository.update_disease(name, data)
 
 
 disease_lookup_service = DiseaseLookupService()

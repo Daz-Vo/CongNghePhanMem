@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Query, Path, status
 import logging
 
 from app.services.disease_lookup_service import disease_lookup_service
-from app.schemas.disease import DiseaseSearchResponse, DiseaseDetailResponse
+from app.schemas.disease import DiseaseSearchResponse, DiseaseDetailResponse, DiseaseTreatmentResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/diseases", tags=["diseases"])
@@ -67,32 +67,32 @@ def get_disease_detail(
         )
 
 
-@router.get("/{disease_name}/treatments")
+@router.get("/{disease_name}/treatments", response_model=DiseaseTreatmentResponse)
 def get_disease_treatments(
     disease_name: str = Path(..., description="Disease name"),
     limit: int = Query(10, ge=1, le=100, description="Max results"),
     skip: int = Query(0, ge=0, description="Number of results to skip"),
 ):
     """
-    Get drugs that treat a specific disease.
+    Get medicines that treat a specific disease.
     
     - **disease_name**: Name of the disease (required)
-    - **limit**: Maximum number of drugs to return (default: 10, max: 100)
-    - **skip**: Number of drugs to skip (default: 0)
+    - **limit**: Maximum number of medicines to return (default: 10, max: 100)
+    - **skip**: Number of medicines to skip (default: 0)
     """
     logger.info(f"GET /api/v1/diseases/{disease_name}/treatments?limit={limit}&skip={skip}")
     try:
-        drugs = disease_lookup_service.get_treating_drugs(disease_name, limit=limit, skip=skip)
-        if not drugs:
+        medicines = disease_lookup_service.get_treating_medicines(disease_name, limit=limit, skip=skip)
+        if not medicines:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"No treatments found for disease '{disease_name}'",
             )
-        return {
-            "disease_name": disease_name,
-            "treatments": drugs,
-            "total": len(drugs),
-        }
+        return DiseaseTreatmentResponse(
+            disease_name=disease_name,
+            treatments=medicines,
+            total=len(medicines),
+        )
     except HTTPException:
         raise
     except Exception as exc:

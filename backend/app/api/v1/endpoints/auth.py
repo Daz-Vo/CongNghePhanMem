@@ -1,6 +1,6 @@
 import logging
 from datetime import timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -61,6 +61,15 @@ def login_access_token(
     return Token(access_token=access_token, token_type="bearer")
 
 
+@router.post("/login", response_model=Token)
+def login_alias(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Session = Depends(get_db),
+):
+    """Spec compliance alias for login."""
+    return login_access_token(form_data, db)
+
+
 @router.post("/forgot-password", response_model=PasswordResetResponse)
 def forgot_password(
     request: ForgotPasswordRequest,
@@ -68,17 +77,17 @@ def forgot_password(
 ):
     user = user_repository.get_user_by_email(db, email=request.email)
     if user:
-        token = generate_password_reset_token(user.email)
+        token = generate_password_reset_token(str(user.email))
         logger.info(f"Reset token for {user.email}: {token}")
         if settings.emails_enabled:
             email_data = generate_reset_password_email(
-                email_to=user.email,
-                email=user.email,
+                email_to=str(user.email),
+                email=str(user.email),
                 token=token,
             )
             try:
                 send_email(
-                    email_to=user.email,
+                    email_to=str(user.email),
                     subject=email_data.subject,
                     html_content=email_data.html_content,
                 )
@@ -105,3 +114,15 @@ def reset_password(
     user_repository.update_user_password(db, user, request.new_password)
     logger.info(f"Password reset success for user_id={user.id}")
     return PasswordResetResponse(message="Password updated successfully")
+
+
+from app.schemas.user import UserCreate, UserRead
+
+@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+def register_alias(
+    user_in: UserCreate,
+    db: Session = Depends(get_db),
+):
+    """Spec compliance alias for registration."""
+    from app.api.v1.endpoints.users import signup
+    return signup(user_in, db)

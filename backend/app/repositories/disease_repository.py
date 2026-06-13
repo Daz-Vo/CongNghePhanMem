@@ -23,14 +23,14 @@ class DiseaseRepository:
         """
         query = """
         MATCH (d:Disease {name: $name})
-        OPTIONAL MATCH (drug:Drug)-[:TREATS]->(d)
+        OPTIONAL MATCH (m:Medicine)-[:TREATS]->(d)
         OPTIONAL MATCH (d)-[:HAS_SYMPTOM|RELATED_TO]->(s:Symptom)
         RETURN 
             d.name AS name,
             d.description AS description,
             d.icd_code AS icd_code,
             d.updated_at AS updated_at,
-            collect(DISTINCT drug.name) AS treating_drugs,
+            collect(DISTINCT m.name) AS treating_medicines,
             collect(DISTINCT {name: s.name, description: s.description}) AS symptoms
         """
         try:
@@ -46,10 +46,10 @@ class DiseaseRepository:
         """
         Search for diseases by name or description.
         """
-        query = """
+        cypher_query = """
         MATCH (d:Disease)
-        WHERE d.name CONTAINS $query 
-           OR d.description CONTAINS $query
+        WHERE toLower(d.name) CONTAINS toLower($query) 
+           OR toLower(d.description) CONTAINS toLower($query)
         RETURN 
             d.name AS name,
             d.description AS description,
@@ -59,27 +59,27 @@ class DiseaseRepository:
         """
         try:
             results = self._repository.execute_read(
-                query, query=query_str, limit=limit, skip=skip
+                cypher_query, query=query_str, limit=limit, skip=skip
             )
             return results if results else []
         except Exception as exc:
             logger.error(f"Error searching diseases with query '{query_str}': {exc}")
             return []
 
-    def get_treating_drugs(
+    def get_treating_medicines(
         self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
-        Get drugs that treat a specific disease.
+        Get medicines that treat a specific disease.
         """
         query = """
         MATCH (disease:Disease {name: $disease_name})
-        MATCH (drug:Drug)-[:TREATS]->(disease)
+        MATCH (m:Medicine)-[:TREATS]->(disease)
         RETURN 
-            drug.name AS name,
-            drug.brand_name AS brand_name,
-            drug.generic_name AS generic_name,
-            drug.dosage AS dosage
+            m.name AS name,
+            m.brand_name AS brand_name,
+            m.generic_name AS generic_name,
+            m.dosage AS dosage
         SKIP $skip
         LIMIT $limit
         """
@@ -90,7 +90,7 @@ class DiseaseRepository:
             return results if results else []
         except Exception as exc:
             logger.error(
-                f"Error getting treating drugs for disease '{disease_name}': {exc}"
+                f"Error getting treating medicines for disease '{disease_name}': {exc}"
             )
             return []
 
@@ -107,6 +107,49 @@ class DiseaseRepository:
         except Exception as exc:
             logger.error(f"Error counting diseases: {exc}")
             return 0
+
+    def create_disease(self, data: dict[str, Any]) -> dict[str, Any] | None:
+        """Create a new disease node."""
+        query = """
+        MERGE (d:Disease {name: $name})
+        SET d += $props, d.updated_at = datetime()
+        RETURN d
+        """
+        name = data.get("name")
+        props = {k: v for k, v in data.items() if k != "name"}
+        try:
+            results = self._repository.execute_write(query, name=name, props=props)
+            return results[0] if results else None
+        except Exception as exc:
+            logger.error(f"Error creating disease '{name}': {exc}")
+            return None
+
+    def update_disease(self, name: str, data: dict[str, Any]) -> dict[str, Any] | None:
+        """Update an existing disease node."""
+        query = """
+        MATCH (d:Disease {name: $name})
+        SET d += $props, d.updated_at = datetime()
+        RETURN d
+        """
+        try:
+            results = self._repository.execute_write(query, name=name, props=data)
+            return results[0] if results else None
+        except Exception as exc:
+            logger.error(f"Error updating disease '{name}': {exc}")
+            return None
+
+    def delete_disease(self, name: str) -> bool:
+        """Delete a disease node and its relationships."""
+        query = """
+        MATCH (d:Disease {name: $name})
+        DETACH DELETE d
+        """
+        try:
+            self._repository.execute_write(query, name=name)
+            return True
+        except Exception as exc:
+            logger.error(f"Error deleting disease '{name}': {exc}")
+            return False
 
 
 disease_repository = DiseaseRepository()

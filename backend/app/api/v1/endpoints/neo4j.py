@@ -1,14 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 import logging
 
-from app.schemas.drug import DrugDetailResponse, DrugSearchResponse
-from app.schemas.disease import DiseaseDetailResponse, DiseaseSearchResponse
-from app.schemas.interaction import (
-    InteractionCheckRequest,
-    InteractionCheckResponse,
-    InteractionResult,
-)
-from app.schemas.domain_model import DiseaseCreate, DrugInteraction
 from app.schemas.graph import GraphResponse
 from app.services.neo4j_service import neo4j_service
 
@@ -45,85 +37,8 @@ def test_neo4j_connection():
         raise HTTPException(status_code=500, detail=f"Neo4j connection failed: {str(e)}")
 
 
-@router.get("/drugs/search", response_model=DrugSearchResponse)
-def search_drugs(
-    query: str = Query(..., min_length=1, max_length=255),
-    limit: int = Query(10, ge=1, le=100),
-):
-    drugs = neo4j_service.search_drugs(query, limit)
-    return {"total": len(drugs), "limit": limit, "items": drugs}
-
-
-@router.get("/drugs/{drug_name}", response_model=DrugDetailResponse)
-def get_drug_detail(drug_name: str):
-    detail = neo4j_service.get_drug_detail(drug_name)
-    if not detail:
-        raise HTTPException(status_code=404, detail="Drug not found")
-    return detail
-
-
-@router.get("/diseases/search", response_model=DiseaseSearchResponse)
-def search_diseases(
-    query: str = Query(..., min_length=1, max_length=255),
-    limit: int = Query(10, ge=1, le=100),
-):
-    diseases = neo4j_service.search_diseases(query, limit)
-    return {"total": len(diseases), "limit": limit, "items": diseases}
-
-
-@router.get("/diseases/{disease_name}", response_model=DiseaseDetailResponse)
-def get_disease_symptoms(disease_name: str):
-    disease = neo4j_service.get_disease_symptoms(disease_name)
-    if not disease:
-        raise HTTPException(status_code=404, detail="Disease not found")
-    return disease
-
-
-@router.post("/interactions/check", response_model=InteractionCheckResponse)
-def check_interactions(request: InteractionCheckRequest):
-    results = neo4j_service.check_drug_interactions(request.drug_names)
-    interactions = [
-        InteractionResult(
-            drug_1=item["drug_1"],
-            drug_2=item["drug_2"],
-            has_interaction=True,
-            severity=item.get("severity"),
-            description=item.get("description"),
-        )
-        for item in results
-    ]
-    return InteractionCheckResponse(results=interactions)
-
-
-@router.post("/diseases/create")
-def create_disease(disease: DiseaseCreate):
-    """Create a new disease node in Neo4j."""
-    logger.info(f"Creating disease: {disease.name}")
-    # We don't have a direct merge_disease but we can use merge_treats_relationship with DUMMY
-    # or better, just use repository if we want it clean.
-    # For now, use the same logic as legacy but via the correct service or direct repo.
-    result = neo4j_service.merge_treats_relationship("DUMMY_DRUG", disease.name)
-    if not result:
-        raise HTTPException(status_code=500, detail="Failed to create disease node")
-    return {"status": "created", "disease": disease.name}
-
-
-@router.post("/relationships/treats")
-def create_treats_relationship(interaction: DrugInteraction):
-    """Create a TREATS relationship between a drug and disease."""
-    logger.info(f"Creating TREATS relationship: {interaction.drug_name} -> {interaction.disease_name}")
-    result = neo4j_service.merge_treats_relationship(
-        drug_name=interaction.drug_name,
-        disease_name=interaction.disease_name,
-    )
-    if not result:
-        raise HTTPException(status_code=500, detail="Failed to create TREATS relationship")
-    return {"status": "created", "drug": interaction.drug_name, "disease": interaction.disease_name}
-
-
 @router.get("/stats")
-def get_neo4j_stats(
-):
+def get_neo4j_stats():
     """Get statistics about Neo4j data."""
     stats = neo4j_service.get_graph_stats()
     return stats

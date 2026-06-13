@@ -1,5 +1,6 @@
 from app.models.user import User
-from app.models.favorite_drug import FavoriteDrug
+from app.models.bookmark import Bookmark
 from app.models.chat import ChatHistory
+from app.models.search_history import SearchHistory
 
-__all__ = ["User", "FavoriteDrug", "ChatHistory"]
+__all__ = ["User", "Bookmark", "ChatHistory", "SearchHistory"]
