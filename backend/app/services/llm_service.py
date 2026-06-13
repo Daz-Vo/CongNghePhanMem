@@ -14,7 +14,7 @@ class LLMService:
     """
 
     SYSTEM_PROMPT = (
-        "You are an expert Multilingual Medical AI Assistant. Your goal is to provide accurate, "
+        "You are an expert Doctor of Pharmacy. Your goal is to provide accurate, "
         "evidence-based information using the provided Knowledge Graph context.\n\n"
         "STRICT RULES:\n"
         "1. LANGUAGE CONSISTENCY: You MUST respond in the EXACT same language as the user's question. "
@@ -40,142 +40,139 @@ class LLMService:
 
     async def detect_language(self, text: str) -> str:
         """
-        Detect the language of the input text using the primary LLM provider.
+        Detect the language of the input text using Gemini.
         Returns the language name or ISO code.
         """
         if not text:
             return "Unknown"
 
-        provider = settings.LLM_PROVIDER
-        if provider == "none":
-            if settings.GEMINI_API_KEY:
-                provider = "gemini"
-            elif settings.OPENAI_API_KEY:
-                provider = "openai"
-
         prompt = f"Detect the language of the following text and return ONLY the language name (e.g., 'Vietnamese', 'English', 'Spanish', 'French', 'German'):\n\n{text}"
 
         try:
-            # We use a very low temperature for detection
-            if provider == "gemini":
-                # Short-circuit call for speed
-                result = await self._call_gemini(prompt, "Language Detection Task")
-                return result.strip() if result else "Unknown"
-            # Fallback to English if detection fails
-            return "English"
+            # Short-circuit call for speed
+            result = await self._call_gemini(prompt, "Language Detection Task")
+            return result.strip() if result else "Unknown"
         except Exception as e:
             logger.error(f"Language detection failed: {e}")
-            return "Unknown"
-
-    async def _call_openai(self, prompt: str, context: str) -> Optional[str]:
-        if not settings.OPENAI_API_KEY:
-            return None
-
-        url = "https://api.openai.com/v1/chat/completions"
-        headers = {**self.headers, "Authorization": f"Bearer {settings.OPENAI_API_KEY}"}
-        payload = {
-            "model": settings.LLM_MODEL or "gpt-4-turbo",
-            "messages": [
-                {"role": "system", "content": self.SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"Context: {context}\n\nQuestion: {prompt}",
-                },
-            ],
-            "temperature": 0.2,
-        }
-
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
-                    url,
-                    json=payload,
-                    headers=headers,
-                    timeout=settings.LLM_TIMEOUT_SECONDS,
-                )
-                response.raise_for_status()
-                return response.json()["choices"][0]["message"]["content"]
-            except Exception as e:
-                logger.error(f"OpenAI API error: {e}")
-                return None
+            return "English"
 
     async def _call_gemini(self, prompt: str, context: str) -> Optional[str]:
-        """Call Google Gemini API with the provided prompt and context."""
+        """Call Google Gemini API (v1beta) with the provided prompt and context.
+
+        Uses settings.GEMINI_MODEL (default: gemini-2.5-flash).
+        The official endpoint format:
+          POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=API_KEY
+        """
         if not settings.GEMINI_API_KEY:
-            logger.warning("GEMINI_API_KEY is not configured")
+            logger.warning("GEMINI_API_KEY is not configured – skipping Gemini call")
             return None
 
-        model = settings.LLM_MODEL or "gemini-1.5-flash"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
+        # Read model from dedicated GEMINI_MODEL setting (never hardcoded)
+        model = settings.GEMINI_MODEL
+        endpoint = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent?key={settings.GEMINI_API_KEY}"
+        )
 
-        # Structure the payload with system_instruction for hardening
+        logger.debug(f"[Gemini] Model : {model}")
+        logger.debug(
+            f"[Gemini] Endpoint: https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=***"
+        )
+        logger.info(
+            f"[Gemini] Calling model={model}, prompt_len={len(prompt)}, context_len={len(context)}"
+        )
+
+        # Build payload – system_instruction is supported from v1beta
         payload = {
             "contents": [
                 {
+                    "role": "user",
                     "parts": [
                         {
-                            "text": f"KNOWLEDGE GRAPH CONTEXT (JSON):\n{context}\n\nUSER QUESTION: {prompt}"
+                            "text": (
+                                f"KNOWLEDGE GRAPH CONTEXT (JSON):\n{context}\n\n"
+                                f"USER QUESTION: {prompt}"
+                            )
                         }
-                    ]
+                    ],
                 }
             ],
             "system_instruction": {"parts": [{"text": self.SYSTEM_PROMPT}]},
-            "generationConfig": {"temperature": 0.2, "topP": 0.8, "topK": 40},
-        }
-
-        logger.info(f"Calling Gemini ({model}) for prompt length: {len(prompt)}")
-
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
-                    url, json=payload, timeout=settings.LLM_TIMEOUT_SECONDS
-                )
-                response.raise_for_status()
-                data = response.json()
-
-                if "candidates" in data and data["candidates"]:
-                    text = data["candidates"][0]["content"]["parts"][0]["text"]
-                    return text
-
-                logger.error(f"Gemini response missing candidates: {data}")
-                return None
-            except Exception as e:
-                logger.error(f"Gemini API error: {e}")
-                return None
-
-    async def _call_groq(self, prompt: str, context: str) -> Optional[str]:
-        if not settings.GROQ_API_KEY:
-            return None
-
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {**self.headers, "Authorization": f"Bearer {settings.GROQ_API_KEY}"}
-        payload = {
-            "model": settings.LLM_MODEL or "mixtral-8x7b-32768",
-            "messages": [
-                {"role": "system", "content": self.SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"Context: {context}\n\nQuestion: {prompt}",
-                },
-            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "topP": 0.8,
+                "topK": 40,
+                "maxOutputTokens": 8192,
+            },
         }
 
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    url,
+                    endpoint,
                     json=payload,
-                    headers=headers,
                     timeout=settings.LLM_TIMEOUT_SECONDS,
                 )
-                response.raise_for_status()
-                return response.json()["choices"][0]["message"]["content"]
+
+                # ── Debug: always log HTTP status ──────────────────────────
+                logger.debug(f"[Gemini] HTTP status: {response.status_code}")
+
+                if response.status_code != 200:
+                    try:
+                        error_body = response.json()
+                    except Exception:
+                        error_body = response.text
+                    logger.error(
+                        f"[Gemini] Non-200 response – status={response.status_code}, "
+                        f"model={model}, body={error_body}"
+                    )
+                    return None
+
+                data = response.json()
+
+                # Check for prompt-level blocking (safety filters, etc.)
+                if data.get("promptFeedback", {}).get("blockReason"):
+                    block_reason = data["promptFeedback"]["blockReason"]
+                    logger.warning(f"[Gemini] Prompt blocked – reason: {block_reason}")
+                    return None
+
+                candidates = data.get("candidates")
+                if not candidates:
+                    logger.error(f"[Gemini] Response has no candidates: {data}")
+                    return None
+
+                # Handle finish reasons other than STOP
+                finish_reason = candidates[0].get("finishReason", "STOP")
+                if finish_reason not in ("STOP", "MAX_TOKENS"):
+                    logger.warning(
+                        f"[Gemini] Unexpected finishReason={finish_reason} for model={model}"
+                    )
+
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if not parts or "text" not in parts[0]:
+                    logger.error(f"[Gemini] No text part in response: {data}")
+                    return None
+
+                text = parts[0]["text"]
+                logger.info(
+                    f"[Gemini] Success – model={model}, response_len={len(text)}"
+                )
+                return text
+
+            except httpx.TimeoutException:
+                logger.error(
+                    f"[Gemini] Request timed out after {settings.LLM_TIMEOUT_SECONDS}s "
+                    f"(model={model})"
+                )
+                return None
             except Exception as e:
-                logger.error(f"Groq API error: {e}")
+                logger.error(
+                    f"[Gemini] Unexpected error (model={model}): {e}", exc_info=True
+                )
                 return None
 
     def _get_safe_fallback_answer(self, context: str) -> str:
-        """Standard fallback answer if all AI providers fail."""
+        """Standard fallback answer if Gemini fails."""
         disclaimer = "\n\nLưu ý: Đây không phải là lời khuyên y tế chuyên môn. Vui lòng tham khảo ý kiến bác sĩ."
 
         if not context:
@@ -193,45 +190,21 @@ class LLMService:
 
     async def generate_response(self, prompt: str, context: str) -> str:
         """
-        Generate response with provider selection, retries, and fallback logic.
+        Generate response using Gemini with retries and fallback logic.
         """
-        provider = settings.LLM_PROVIDER
-        if provider == "none":
-            # Auto-detect provider if not set but key exists
-            if settings.GEMINI_API_KEY:
-                provider = "gemini"
-            elif settings.OPENAI_API_KEY:
-                provider = "openai"
-
         max_retries = settings.LLM_MAX_RETRIES
         response = None
 
         for attempt in range(max_retries):
             try:
-                if provider == "openai":
-                    response = await self._call_openai(prompt, context)
-                elif provider == "gemini":
-                    response = await self._call_gemini(prompt, context)
-                elif provider == "groq":
-                    response = await self._call_groq(prompt, context)
-
+                response = await self._call_gemini(prompt, context)
                 if response:
                     break
 
-                logger.warning(
-                    f"Attempt {attempt + 1} failed for {provider}, retrying..."
-                )
+                logger.warning(f"Attempt {attempt + 1} failed for Gemini, retrying...")
                 await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
             except Exception as e:
                 logger.error(f"Error in generate_response attempt {attempt + 1}: {e}")
-
-        # Fallback to other providers if primary failed
-        if not response:
-            logger.info("Primary provider failed all retries, trying fallbacks...")
-            if provider != "gemini" and settings.GEMINI_API_KEY:
-                response = await self._call_gemini(prompt, context)
-            elif provider != "openai" and settings.OPENAI_API_KEY:
-                response = await self._call_openai(prompt, context)
 
         if response:
             return response

@@ -28,66 +28,37 @@ class ChatService:
             return "disease_info"
         return "general_query"
 
-    def _build_context(self, entities: Dict[str, List[str]]) -> Tuple[str, List[str], List[str]]:
+    def _build_context(self, entities: Dict[str, List[str]], intent: str = "general_query") -> Tuple[str, List[str], List[str]]:
         """
-        Retrieves detailed data from Neo4j for detected entities and builds a JSON context.
+        Retrieves detailed subgraph from Neo4j for detected entities in a single batch.
         """
-        context_data = []
+        drugs = entities.get("drugs", [])
+        diseases = entities.get("diseases", [])
+        
+        if not drugs and not diseases:
+            return "", [], []
+
+        # Graph-First lookup: batch all entities into one subgraph query
+        context_data = neo4j_service.get_subgraph_context(drugs, diseases)
+        
         sources = []
         warnings = []
         
-        drugs = entities.get("drugs", [])
-        diseases = entities.get("diseases", [])
-
-        # 1. Fetch Drug Details
-        for drug_name in drugs:
-            detail = neo4j_service.get_drug_detail(drug_name)
-            if detail:
-                drug_info = {
-                    "type": "drug",
-                    "name": detail.get("name"),
-                    "generic_name": detail.get("generic_name"),
-                    "indications": detail.get("indications"),
-                    "dosage": detail.get("dosage"),
-                    "warnings": detail.get("warnings"),
-                    "ingredients": [i["name"] for i in detail.get("ingredients", [])],
-                    "manufacturers": [m["name"] for m in detail.get("manufacturers", [])]
-                }
-                context_data.append(drug_info)
-                if detail.get('warnings'):
-                    warnings.append(f"Cảnh báo cho {drug_name}: {detail['warnings']}")
-                sources.append(f"Neo4j: Drug({drug_name})")
-
-        # 2. Fetch Disease & Symptom Details
-        for disease_name in diseases:
-            detail = neo4j_service.get_disease_symptoms(disease_name)
-            if detail:
-                disease_info = {
-                    "type": "disease",
-                    "name": detail.get("name"),
-                    "description": detail.get("description"),
-                    "symptoms": [s["name"] for s in detail.get("symptoms", [])]
-                }
-                context_data.append(disease_info)
-                sources.append(f"Neo4j: Disease({disease_name})")
-
-        # 3. Fetch Drug Interactions (if multiple drugs detected)
-        if len(drugs) >= 2:
-            interactions = neo4j_service.check_drug_interactions(drugs)
-            if interactions:
-                for inter in interactions:
-                    context_data.append({
-                        "type": "interaction",
-                        "drug_1": inter.get("drug_1"),
-                        "drug_2": inter.get("drug_2"),
-                        "severity": inter.get("severity"),
-                        "description": inter.get("description")
-                    })
-                    warnings.append(f"Tương tác ({inter.get('severity')}): {inter.get('drug_1')} và {inter.get('drug_2')}")
-                sources.append("Neo4j: Drug Interactions")
+        for item in context_data:
+            name = item.get("name")
+            label = item.get("type", "unknown").capitalize()
+            sources.append(f"Neo4j: {label}({name})")
+            
+            if item.get("warnings"):
+                warnings.append(f"Cảnh báo cho {name}: {item['warnings']}")
+                
+            # If multiple drugs, check for specific interactions in the items
+            if intent == "interaction_check" and item.get("type") == "drug":
+                # Ensure interactions are highlighted if that's the intent
+                for inter in item.get("interactions", []):
+                    warnings.append(f"Tương tác ({inter.get('severity')}): {name} và {inter.get('name')}")
 
         if context_data:
-            # Sort sources and remove duplicates
             unique_sources = sorted(list(set(sources)))
             context_str = json.dumps(context_data, indent=2, ensure_ascii=False)
             return context_str, unique_sources, list(set(warnings))
@@ -108,7 +79,7 @@ class ChatService:
             
             # 3. Intent & Context Retrieval
             intent = self._detect_intent(message)
-            context, sources, warnings = self._build_context(entities)
+            context, sources, warnings = self._build_context(entities, intent)
             
             logger.info(f"RAG Context length: {len(context)} chars")
             

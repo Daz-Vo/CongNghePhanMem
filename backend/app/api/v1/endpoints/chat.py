@@ -9,8 +9,8 @@ from app.schemas.chat import ChatMessageRequest, ChatMessageResponse, ChatHistor
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-@router.post("/", response_model=ChatMessageResponse)
-async def chat_with_ai(
+@router.post("/ask", response_model=ChatMessageResponse)
+async def ask_question(
     request: ChatMessageRequest,
     current_user: Annotated[Optional[User], Depends(get_optional_current_user)],
     db: Annotated[Session, Depends(get_db)]

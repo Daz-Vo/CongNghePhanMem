@@ -56,9 +56,18 @@ class DiseaseLookupService:
                 logger.warning(f"Disease '{disease_name}' not found")
                 return None
 
+            # Transform symptoms
+            symptoms = [
+                {"name": s.get("name"), "description": s.get("description")}
+                for s in (disease.get("symptoms") or [])
+                if s and s.get("name")
+            ]
+
             detail = DiseaseDetailResponse(
                 name=disease.get("name", ""),
                 description=disease.get("description"),
+                symptoms=symptoms,
+                treating_drugs=disease.get("treating_drugs") or []
             )
 
             logger.info(f"Successfully fetched details for disease '{disease_name}'")

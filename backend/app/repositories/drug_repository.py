@@ -22,9 +22,13 @@ class DrugRepository:
         Get a drug by exact name with all related information.
         """
         query = """
-        MATCH (d:Drug {name: $name})
+        MATCH (d:Drug)
+        WHERE toLower(trim(d.name)) = toLower(trim($name))
+           OR toLower(trim(coalesce(d.brand_name, ""))) = toLower(trim($name))
+           OR toLower(trim(coalesce(d.generic_name, ""))) = toLower(trim($name))
         OPTIONAL MATCH (d)-[:CONTAINS]->(i:Ingredient)
         OPTIONAL MATCH (d)-[:MADE_BY]->(m:Manufacturer)
+        OPTIONAL MATCH (d)-[:TREATS]->(dis:Disease)
         OPTIONAL MATCH (d)-[int:INTERACTS_WITH]->(d2:Drug)
         RETURN 
             d.name AS name,
@@ -35,9 +39,12 @@ class DrugRepository:
             d.indications AS indications,
             d.warnings AS warnings,
             d.dosage AS dosage,
+            d.contraindications AS contraindications,
+            d.adverse_reactions AS adverse_reactions,
             d.updated_at AS updated_at,
             collect(DISTINCT i.name) AS ingredients,
             collect(DISTINCT m.name) AS manufacturers,
+            collect(DISTINCT dis.name) AS treated_diseases,
             collect({
                 name: d2.name,
                 severity: int.severity,
@@ -59,9 +66,9 @@ class DrugRepository:
         """
         query = """
         MATCH (d:Drug)
-        WHERE d.name CONTAINS $query 
-           OR d.brand_name CONTAINS $query 
-           OR d.generic_name CONTAINS $query
+        WHERE toLower(coalesce(d.name, "")) CONTAINS toLower($query) 
+           OR toLower(coalesce(d.brand_name, "")) CONTAINS toLower($query) 
+           OR toLower(coalesce(d.generic_name, "")) CONTAINS toLower($query)
         RETURN 
             d.name AS name,
             d.brand_name AS brand_name,

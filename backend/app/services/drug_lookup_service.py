@@ -94,6 +94,7 @@ class DrugLookupService:
                 ingredients=ingredients,
                 manufacturers=manufacturers,
                 interactions=interactions,
+                treated_diseases=drug.get("treated_diseases") or []
             )
 
             logger.info(f"Successfully fetched details for drug '{drug_name}'")

@@ -1,0 +1,27 @@
+disease_name,symptom_name
+Headache,Pain
+Fever,Fever
+Common Cold,Sore Throat
+Common Cold,Runny Nose
+Common Cold,Cough
+Hyperlipidemia,High Cholesterol
+GERD,Heartburn
+GERD,Acid Reflux
+Asthma,Wheezing
+Asthma,Shortness Of Breath
+Rheumatoid Arthritis,Joint Pain
+Rheumatoid Arthritis,Swelling
+Type 2 Diabetes,High Blood Sugar
+Type 2 Diabetes,Fatigue
+Hypothyroidism,Fatigue
+Hypothyroidism,Cold Intolerance
+Hypertension,High Blood Pressure
+Anxiety Disorder,Anxiety
+Depression,Sadness
+Bacterial Infection,Fever
+Bacterial Infection,Fatigue
+Blood Clot,Bleeding
+Neuropathic Pain,Nerve Pain
+Heart Failure,Shortness Of Breath
+Heart Failure,Fatigue
+Heart Failure,Swelling

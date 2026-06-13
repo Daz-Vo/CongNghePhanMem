@@ -8,7 +8,6 @@ import logging
 
 # Neo4j service check
 from app.services.neo4j_service import neo4j_service
-from app.services.startup_import_service import perform_startup_import
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -67,8 +66,4 @@ def on_startup() -> None:
         logger.exception(f"✗ Neo4j connection failed during startup: {exc}")
     logger.info("=" * 60)
     
-    # Auto-import openFDA drugs
-    try:
-        perform_startup_import()
-    except Exception as exc:
-        logger.exception(f"Startup import error (non-blocking): {exc}")
+    logger.info("Startup openFDA import disabled; using database-first seed data")

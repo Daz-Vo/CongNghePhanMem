@@ -92,17 +92,10 @@ class Settings(BaseSettings):
     NEO4J_PASSWORD: str = ""
     NEO4J_DATABASE: str = "neo4j"
 
-    # OpenFDA
-    OPENFDA_DRUG_LABEL_URL: str = "https://api.fda.gov/drug/label.json"
-    OPENFDA_IMPORT_LIMIT: int = 20  # Number of drugs to import on startup
-    OPENFDA_MIN_EXISTING_NODES: int = 100  # Skip auto-import if Neo4j already has N+ nodes
 
-    # LLM
-    LLM_PROVIDER: Literal["openai", "gemini", "groq", "none"] = "none"
-    OPENAI_API_KEY: str | None = None
+    # LLM (Gemini Only)
     GEMINI_API_KEY: str | None = None
-    GROQ_API_KEY: str | None = None
-    LLM_MODEL: str | None = None
+    GEMINI_MODEL: str = "gemini-2.5-flash"  # Model used for all Gemini calls
     LLM_TIMEOUT_SECONDS: int = 30
     LLM_MAX_RETRIES: int = 3
 

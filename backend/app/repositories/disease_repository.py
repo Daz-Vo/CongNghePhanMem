@@ -24,12 +24,14 @@ class DiseaseRepository:
         query = """
         MATCH (d:Disease {name: $name})
         OPTIONAL MATCH (drug:Drug)-[:TREATS]->(d)
+        OPTIONAL MATCH (d)-[:HAS_SYMPTOM|RELATED_TO]->(s:Symptom)
         RETURN 
             d.name AS name,
             d.description AS description,
             d.icd_code AS icd_code,
             d.updated_at AS updated_at,
-            collect(DISTINCT drug.name) AS treating_drugs
+            collect(DISTINCT drug.name) AS treating_drugs,
+            collect(DISTINCT {name: s.name, description: s.description}) AS symptoms
         """
         try:
             results = self._repository.execute_read(query, name=disease_name)
