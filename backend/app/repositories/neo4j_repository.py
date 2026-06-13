@@ -45,7 +45,7 @@ class Neo4jRepository:
             self._driver = None
             logger.info("Neo4j repository closed")
 
-    def execute_read(self, query: str, **params: Any) -> list[dict]:
+    def execute_read(self, cypher_query: str, **params: Any) -> list[dict]:
         try:
             from neo4j.exceptions import Neo4jError  # type: ignore[import]
         except ImportError as exc:
@@ -53,10 +53,10 @@ class Neo4jRepository:
 
         try:
             self._ensure_driver()
-            logger.info(f"Executing Neo4j READ query: {query}")
+            logger.info(f"Executing Neo4j READ query: {cypher_query}")
             
             def _read_tx(tx):
-                result = tx.run(query, **params)
+                result = tx.run(cypher_query, **params)
                 return [record.data() for record in result]
 
             with self._driver.session(database=settings.NEO4J_DATABASE) as session:
@@ -67,7 +67,7 @@ class Neo4jRepository:
             logger.error(f"Neo4j read error: {error}")
             raise
 
-    def execute_write(self, query: str, **params: Any) -> list[dict]:
+    def execute_write(self, cypher_query: str, **params: Any) -> list[dict]:
         try:
             from neo4j.exceptions import Neo4jError  # type: ignore[import]
         except ImportError as exc:
@@ -75,10 +75,10 @@ class Neo4jRepository:
 
         try:
             self._ensure_driver()
-            logger.info(f"Executing Neo4j WRITE query: {query}")
+            logger.info(f"Executing Neo4j WRITE query: {cypher_query}")
             
             def _write_tx(tx):
-                result = tx.run(query, **params)
+                result = tx.run(cypher_query, **params)
                 return [record.data() for record in result]
 
             with self._driver.session(database=settings.NEO4J_DATABASE) as session:

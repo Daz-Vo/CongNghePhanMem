@@ -7,41 +7,46 @@ from fastapi import APIRouter, HTTPException, Query, Path, status
 import logging
 
 from app.services.drug_interaction_service import drug_interaction_service
-from app.schemas.interaction import InteractionCheckRequest, InteractionCheckResponse
+from app.schemas.interaction import (
+    InteractionCheckRequest, 
+    InteractionCheckResponse, 
+    InteractionDetailResponse, 
+    InteractionListResponse,
+    InteractionSummaryResponse
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/interactions", tags=["interactions"])
 
 
-@router.get("/{drug_name}")
+@router.get("/{drug_name}", response_model=InteractionListResponse)
 def get_drug_interactions(
-    drug_name: str = Path(..., description="Drug name"),
+    drug_name: str = Path(..., description="Medicine name"),
     limit: int = Query(20, ge=1, le=100, description="Max results"),
     skip: int = Query(0, ge=0, description="Number of results to skip"),
 ):
     """
-    Get all known interactions for a specific drug.
+    Get all known interactions for a specific medicine.
     
-    - **drug_name**: Name of the drug to check (required)
+    - **drug_name**: Name of the medicine to check (required)
     
-    Returns list of drugs that interact with the specified drug,
-    including severity level and description of the interaction.
+    Returns list of medicines that interact with the specified medicine.
     """
     logger.info(f"GET /api/v1/interactions/{drug_name}?limit={limit}&skip={skip}")
     try:
         interactions = drug_interaction_service.get_drug_interactions(drug_name, limit=limit, skip=skip)
         if not interactions:
-            return {
-                "drug_name": drug_name,
-                "interactions": [],
-                "total": 0,
-                "message": f"No interactions found for '{drug_name}'",
-            }
-        return {
-            "drug_name": drug_name,
-            "interactions": interactions,
-            "total": len(interactions),
-        }
+            return InteractionListResponse(
+                drug_name=drug_name,
+                interactions=[],
+                total=0,
+                message=f"No interactions found for '{drug_name}'",
+            )
+        return InteractionListResponse(
+            drug_name=drug_name,
+            interactions=interactions,
+            total=len(interactions),
+        )
     except Exception as exc:
         logger.exception(f"Error getting drug interactions: {exc}")
         raise HTTPException(
@@ -55,21 +60,11 @@ def check_multiple_interactions(
     request: InteractionCheckRequest,
 ):
     """
-    Check interactions between multiple drugs.
-    
-    Request body should contain:
-    ```json
-    {
-        "drug_names": ["Drug1", "Drug2", "Drug3"]
-    }
-    ```
+    Check interactions between multiple medicines.
     
     Returns all interaction pairs found with severity levels.
-    
-    - Severity levels: "severe", "moderate", "mild"
-    - Minimum 2 drugs required, maximum 10
     """
-    logger.info(f"POST /api/v1/interactions/check with drugs: {request.drug_names}")
+    logger.info(f"POST /api/v1/interactions/check with medicines: {request.drug_names}")
     try:
         return drug_interaction_service.check_multiple_interactions(request.drug_names)
     except Exception as exc:
@@ -80,19 +75,15 @@ def check_multiple_interactions(
         )
 
 
-@router.get("/{drug_1}/with/{drug_2}")
+@router.get("/{drug_1}/with/{drug_2}", response_model=InteractionDetailResponse)
 def assess_interaction(
-    drug_1: str = Path(..., description="First drug name"),
-    drug_2: str = Path(..., description="Second drug name"),
+    drug_1: str = Path(..., description="First medicine name"),
+    drug_2: str = Path(..., description="Second medicine name"),
 ):
     """
-    Assess the interaction between two specific drugs.
+    Assess the interaction between two specific medicines.
     
-    - **drug_1**: Name of first drug (required)
-    - **drug_2**: Name of second drug (required)
-    
-    Returns detailed interaction information if it exists,
-    or null if no interaction is known.
+    Returns detailed interaction information if it exists.
     """
     logger.info(f"GET /api/v1/interactions/{drug_1}/with/{drug_2}")
     try:
@@ -100,19 +91,19 @@ def assess_interaction(
             drug_1, drug_2
         )
         if not interaction:
-            return {
-                "drug_1": drug_1,
-                "drug_2": drug_2,
-                "has_interaction": False,
-                "message": f"No known interaction between '{drug_1}' and '{drug_2}'",
-            }
-        return {
-            "drug_1": drug_1,
-            "drug_2": drug_2,
-            "has_interaction": True,
-            "severity": interaction.get("severity"),
-            "description": interaction.get("description"),
-        }
+            return InteractionDetailResponse(
+                drug_1=drug_1,
+                drug_2=drug_2,
+                has_interaction=False,
+                message=f"No known interaction between '{drug_1}' and '{drug_2}'",
+            )
+        return InteractionDetailResponse(
+            drug_1=drug_1,
+            drug_2=drug_2,
+            has_interaction=True,
+            severity=interaction.get("severity"),
+            description=interaction.get("description"),
+        )
     except Exception as exc:
         logger.exception(f"Error assessing interaction: {exc}")
         raise HTTPException(
@@ -121,30 +112,17 @@ def assess_interaction(
         )
 
 
-@router.post("/analyze-combination")
+@router.post("/analyze-combination", response_model=InteractionSummaryResponse)
 def analyze_drug_combination(
     request: InteractionCheckRequest,
 ):
     """
-    Analyze a combination of drugs to identify safe and unsafe combinations.
-    
-    Request body should contain:
-    ```json
-    {
-        "drug_names": ["Drug1", "Drug2", "Drug3"]
-    }
-    ```
-    
-    Returns:
-    - Summary of all interactions by severity
-    - Overall safety assessment (is_safe: boolean)
-    - Warnings for severe and moderate interactions
-    
-    - Minimum 2 drugs required, maximum 10
+    Analyze a combination of medicines to identify safe and unsafe combinations.
     """
-    logger.info(f"POST /api/v1/interactions/analyze-combination with drugs: {request.drug_names}")
+    logger.info(f"POST /api/v1/interactions/analyze-combination with medicines: {request.drug_names}")
     try:
-        return drug_interaction_service.get_safe_drug_combinations(request.drug_names)
+        result = drug_interaction_service.get_safe_drug_combinations(request.drug_names)
+        return InteractionSummaryResponse(**result)
     except Exception as exc:
         logger.exception(f"Error analyzing drug combination: {exc}")
         raise HTTPException(

@@ -1,26 +1,17 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
-from typing import Annotated
+from sqlalchemy.orm import Session
+from typing import Annotated, Optional
 
-from app.api.v1.endpoints.deps import get_current_user
+from app.api.v1.endpoints.deps import get_db, get_current_user
 from app.models.user import User
-# from app.services.import_openfda_service import import_openfda_drugs
 from app.services.neo4j_service import neo4j_service
+from app.services.medicine_lookup_service import medicine_lookup_service
+from app.services.disease_lookup_service import disease_lookup_service
+from app.schemas.medicine import MedicineCreate, MedicineUpdate, MedicineDetailResponse
+from app.schemas.disease import DiseaseCreate, DiseaseUpdate, DiseaseDetailResponse
+from app.schemas.chat import AILogResponse
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-@router.post("/import/openfda")
-def admin_import_openfda(
-    current_user: Annotated[User, Depends(get_current_user)],
-    limit: int = Query(10, ge=1, le=1000),
-    skip: int = Query(0, ge=0)
-):
-    """
-    Admin only: Import drugs from openFDA.
-    """
-    raise HTTPException(
-        status_code=410,
-        detail="OpenFDA import has been disabled. Use CSV seed instead."
-    )
 
 @router.post("/rebuild-graph")
 def admin_rebuild_graph(
@@ -63,3 +54,154 @@ def admin_graph_stats(
         raise HTTPException(status_code=403, detail="Only superusers can perform this action")
     
     return neo4j_service.get_graph_stats()
+
+@router.get("/users")
+def admin_get_users(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = 100,
+    skip: int = 0
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    from app.repositories import user_repository
+    return user_repository.get_users(db, limit=limit, skip=skip)
+
+@router.put("/users/{id}/role")
+def admin_update_user_role(
+    id: int,
+    is_superuser: bool,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    from app.repositories import user_repository
+    user = user_repository.update_user_role(db, id, is_superuser)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.put("/users/{id}/status")
+def admin_update_user_status(
+    id: int,
+    is_active: bool,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    from app.repositories import user_repository
+    user = user_repository.update_user_status(db, id, is_active)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.get("/stats")
+def admin_get_stats(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    from app.repositories import user_repository
+    user_stats = user_repository.get_user_stats(db)
+    graph_stats = neo4j_service.get_graph_stats()
+    return {
+        "users": user_stats,
+        "graph": graph_stats
+    }
+
+@router.get("/ai-logs", response_model=AILogResponse)
+def admin_get_ai_logs(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    user_id: Optional[int] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1)
+):
+    """Admin: Retrieve AI interaction logs from ChatHistory."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    from app.services.chat_service import chat_service
+    skip = (page - 1) * limit
+    logs = chat_service.get_all_chat_logs(db, user_id=user_id, limit=limit, skip=skip)
+    total = chat_service.get_chat_logs_count(db, user_id=user_id)
+    return AILogResponse(total=total, items=logs, page=page, limit=limit)
+
+# Admin Medicine CRUD
+@router.post("/medicines", response_model=MedicineDetailResponse, status_code=201)
+def admin_create_medicine(
+    medicine_in: MedicineCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    result = medicine_lookup_service.create_medicine(medicine_in.model_dump())
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to create medicine")
+    return result
+
+@router.put("/medicines/{id}", response_model=MedicineDetailResponse)
+def admin_update_medicine(
+    id: str,
+    medicine_in: MedicineUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    result = medicine_lookup_service.update_medicine(id, medicine_in.model_dump(exclude_unset=True))
+    if not result:
+        raise HTTPException(status_code=404, detail="Medicine not found")
+    return result
+
+@router.delete("/medicines/{id}")
+def admin_delete_medicine(
+    id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    success = medicine_lookup_service.delete_medicine(id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Medicine not found")
+    return {"success": True}
+
+# Admin Disease CRUD
+@router.post("/diseases", response_model=DiseaseDetailResponse, status_code=201)
+def admin_create_disease(
+    disease_in: DiseaseCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    result = disease_lookup_service.create_disease(disease_in.model_dump())
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to create disease")
+    return result
+
+@router.put("/diseases/{id}", response_model=DiseaseDetailResponse)
+def admin_update_disease(
+    id: str,
+    disease_in: DiseaseUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    result = disease_lookup_service.update_disease(id, disease_in.model_dump(exclude_unset=True))
+    if not result:
+        raise HTTPException(status_code=404, detail="Disease not found")
+    return result
+
+@router.delete("/diseases/{id}")
+def admin_delete_disease(
+    id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    success = disease_lookup_service.delete_disease(id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Disease not found")
+    return {"success": True}

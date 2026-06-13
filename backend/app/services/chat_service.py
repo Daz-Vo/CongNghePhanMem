@@ -119,5 +119,24 @@ class ChatService:
     def get_user_history(self, db: Session, user_id: int, limit: int = 20) -> List[Any]:
         return db.query(ChatHistory).filter(ChatHistory.user_id == user_id).order_by(ChatHistory.created_at.desc()).limit(limit).all()
 
+    def get_chat_detail(self, db: Session, chat_id: int, user_id: int) -> Optional[ChatHistory]:
+        return db.query(ChatHistory).filter(ChatHistory.id == chat_id, ChatHistory.user_id == user_id).first()
+
+    def get_all_chat_logs(
+        self, db: Session, user_id: Optional[int] = None, limit: int = 20, skip: int = 0
+    ) -> List[ChatHistory]:
+        """Admin: Retrieve all chat logs."""
+        query = db.query(ChatHistory)
+        if user_id:
+            query = query.filter(ChatHistory.user_id == user_id)
+        return query.order_by(ChatHistory.created_at.desc()).offset(skip).limit(limit).all()
+
+    def get_chat_logs_count(self, db: Session, user_id: Optional[int] = None) -> int:
+        """Admin: Get total count of chat logs."""
+        query = db.query(ChatHistory)
+        if user_id:
+            query = query.filter(ChatHistory.user_id == user_id)
+        return query.count()
+
 chat_service = ChatService()
 

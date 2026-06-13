@@ -41,23 +41,6 @@ class DiseaseRead(DiseaseBase):
         from_attributes = True
 
 
-# ============ FavoriteDrug Schema ============
-class FavoriteDrugBase(BaseModel):
-    user_id: int
-    drug_name: str
-
-
-class FavoriteDrugCreate(FavoriteDrugBase):
-    pass
-
-
-class FavoriteDrugRead(FavoriteDrugBase):
-    created_at: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
-
-
 # ============ Interaction/Relationship Schema ============
 class DrugInteraction(BaseModel):
     """Represent a TREATS relationship between Drug and Disease."""
