@@ -52,6 +52,7 @@ class DrugDetailResponse(DrugResponse):
     ingredients: list[DrugIngredient] = Field(default_factory=list)
     manufacturers: list[DrugManufacturer] = Field(default_factory=list)
     interactions: list[DrugInteraction] = Field(default_factory=list)
+    treated_diseases: list[str] = Field(default_factory=list)
 
 
 class DrugSearchResponse(BaseModel):

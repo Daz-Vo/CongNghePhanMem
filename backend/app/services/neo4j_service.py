@@ -35,40 +35,120 @@ class Neo4jService:
 
     def merge_drug(self, drug_data: dict[str, Any]) -> bool:
         try:
+            # Fallback for name: brand_name -> generic_name -> "Unknown"
+            name = drug_data.get("name") or drug_data.get("brand_name") or drug_data.get("generic_name") or "Unknown"
+            
             query = """
             MERGE (d:Drug {name: $name})
-            SET d.generic_name = $generic_name,
+            SET d.brand_name = $brand_name,
+                d.generic_name = $generic_name,
                 d.purpose = $purpose,
                 d.indications = $indications,
                 d.warnings = $warnings,
                 d.dosage = $dosage,
+                d.contraindications = $contraindications,
+                d.adverse_reactions = $adverse_reactions,
                 d.updated_at = datetime()
             RETURN d.name AS name
             """
             results = self._repository.execute_write(
                 query,
-                name=drug_data.get("name", ""),
+                name=name,
+                brand_name=drug_data.get("brand_name"),
                 generic_name=drug_data.get("generic_name"),
                 purpose=drug_data.get("purpose"),
                 indications=drug_data.get("indications"),
                 warnings=drug_data.get("warnings"),
                 dosage=drug_data.get("dosage"),
+                contraindications=drug_data.get("contraindications"),
+                adverse_reactions=drug_data.get("adverse_reactions"),
             )
             return bool(results)
         except Exception as e:
             logger.error(f"Error merging drug: {e}")
             return False
 
+    def merge_disease(self, disease_data: dict[str, Any]) -> bool:
+        try:
+            name = disease_data.get("name")
+            if not name:
+                return False
+            query = """
+            MERGE (d:Disease {name: $name})
+            SET d.description = $description,
+                d.updated_at = datetime()
+            RETURN d.name AS name
+            """
+            results = self._repository.execute_write(
+                query,
+                name=name,
+                description=disease_data.get("description"),
+            )
+            return bool(results)
+        except Exception as e:
+            logger.error(f"Error merging disease: {e}")
+            return False
+
+    def merge_symptom(self, symptom_data: dict[str, Any]) -> bool:
+        try:
+            name = symptom_data.get("name")
+            if not name:
+                return False
+            query = """
+            MERGE (s:Symptom {name: $name})
+            SET s.updated_at = datetime()
+            RETURN s.name AS name
+            """
+            results = self._repository.execute_write(query, name=name)
+            return bool(results)
+        except Exception as e:
+            logger.error(f"Error merging symptom: {e}")
+            return False
+
+    def merge_ingredient(self, ingredient_data: dict[str, Any]) -> bool:
+        try:
+            name = ingredient_data.get("name")
+            if not name:
+                return False
+            query = """
+            MERGE (i:Ingredient {name: $name})
+            SET i.updated_at = datetime()
+            RETURN i.name AS name
+            """
+            results = self._repository.execute_write(query, name=name)
+            return bool(results)
+        except Exception as e:
+            logger.error(f"Error merging ingredient: {e}")
+            return False
+
+    def merge_manufacturer(self, manufacturer_data: dict[str, Any]) -> bool:
+        try:
+            name = manufacturer_data.get("name")
+            if not name:
+                return False
+            query = """
+            MERGE (m:Manufacturer {name: $name})
+            SET m.updated_at = datetime()
+            RETURN m.name AS name
+            """
+            results = self._repository.execute_write(query, name=name)
+            return bool(results)
+        except Exception as e:
+            logger.error(f"Error merging manufacturer: {e}")
+            return False
+
     def search_drugs(self, query_text: str, limit: int = 10) -> list[dict[str, Any]]:
         try:
             query = """
             MATCH (d:Drug)
-            WHERE toLower(d.name) CONTAINS toLower($search)
+            WHERE toLower(coalesce(d.name, "")) CONTAINS toLower($search)
+               OR toLower(coalesce(d.brand_name, "")) CONTAINS toLower($search)
                OR toLower(coalesce(d.generic_name, "")) CONTAINS toLower($search)
                OR toLower(coalesce(d.purpose, "")) CONTAINS toLower($search)
             RETURN {
                 id: id(d),
                 name: d.name,
+                brand_name: d.brand_name,
                 generic_name: d.generic_name,
                 purpose: d.purpose
             } AS drug
@@ -87,6 +167,8 @@ class Neo4jService:
             query = """
             MATCH (d:Drug)
             WHERE toLower(trim(d.name)) = toLower(trim($name))
+               OR toLower(trim(coalesce(d.brand_name, ""))) = toLower(trim($name))
+               OR toLower(trim(coalesce(d.generic_name, ""))) = toLower(trim($name))
 
             OPTIONAL MATCH (d)-[:CONTAINS]->(i:Ingredient)
             WITH d,
@@ -102,25 +184,36 @@ class Neo4jService:
                 name: m.name
             }) AS manufacturers
 
-            OPTIONAL MATCH (d)-[r:INTERACTS_WITH]-(other:Drug)
+            OPTIONAL MATCH (d)-[:TREATS]->(dis:Disease)
             WITH d, ingredients, manufacturers,
+            collect(DISTINCT {
+                id: id(dis),
+                name: dis.name
+            }) AS treated_diseases
+
+            OPTIONAL MATCH (d)-[int:INTERACTS_WITH]-(other:Drug)
+            WITH d, ingredients, manufacturers, treated_diseases,
             collect(DISTINCT {
                 id: id(other),
                 name: other.name,
-                severity: r.severity,
-                description: r.description
+                severity: int.severity,
+                description: int.description
             }) AS interactions
 
             RETURN {
                 id: id(d),
                 name: d.name,
+                brand_name: d.brand_name,
                 generic_name: d.generic_name,
                 purpose: d.purpose,
                 indications: d.indications,
                 warnings: d.warnings,
                 dosage: d.dosage,
+                contraindications: d.contraindications,
+                adverse_reactions: d.adverse_reactions,
                 ingredients: ingredients,
                 manufacturers: manufacturers,
+                treated_diseases: treated_diseases,
                 interactions: interactions
             } AS detail
             """
@@ -142,6 +235,11 @@ class Neo4jService:
             detail["interactions"] = [
                 item
                 for item in detail.get("interactions", [])
+                if item and item.get("name")
+            ]
+            detail["treated_diseases"] = [
+                item
+                for item in detail.get("treated_diseases", [])
                 if item and item.get("name")
             ]
             return detail
@@ -179,12 +277,15 @@ class Neo4jService:
             query = """
             MATCH (d:Disease)
             WHERE toLower(trim(d.name)) = toLower(trim($name))
-            OPTIONAL MATCH (d)-[:RELATED_TO]->(s:Symptom)
+            OPTIONAL MATCH (d)-[:HAS_SYMPTOM|RELATED_TO]->(s:Symptom)
+            WITH d, collect(distinct {id: id(s), name: s.name}) AS symptoms
+            OPTIONAL MATCH (drug:Drug)-[:TREATS]->(d)
             RETURN {
                 id: id(d),
                 name: d.name,
                 description: d.description,
-                symptoms: collect(distinct {id: id(s), name: s.name})
+                symptoms: symptoms,
+                treating_drugs: collect(distinct {id: id(drug), name: drug.name})
             } AS disease
             """
             results = self._repository.execute_read(query, name=disease_name)
@@ -205,10 +306,66 @@ class Neo4jService:
             disease["symptoms"] = [
                 item for item in disease.get("symptoms", []) if item and item.get("name")
             ]
+            disease["treating_drugs"] = [
+                item for item in disease.get("treating_drugs", []) if item and item.get("name")
+            ]
             return disease
         except Exception as e:
             logger.error(f"Error getting disease symptoms for '{disease_name}': {e}")
             return None
+
+    def get_subgraph_context(self, drug_names: list[str], disease_names: list[str]) -> list[dict[str, Any]]:
+        """
+        Optimized 'Graph-First' lookup.
+        Fetches all relevant nodes and relationships for multiple entities in one visit.
+        """
+        if not drug_names and not disease_names:
+            return []
+            
+        try:
+            query = """
+            MATCH (n)
+            WHERE (n:Drug AND n.name IN $drugs) OR (n:Disease AND n.name IN $diseases)
+            
+            OPTIONAL MATCH (n)-[r]-(m)
+            WHERE type(r) IN ['TREATS', 'HAS_SYMPTOM', 'CONTAINS', 'MADE_BY', 'INTERACTS_WITH']
+            
+            RETURN n, collect({
+                rel: type(r),
+                neighbor_label: labels(m)[0],
+                neighbor_name: m.name,
+                rel_props: properties(r)
+            }) AS connections
+            """
+            results = self._repository.execute_read(query, drugs=drug_names, diseases=disease_names)
+            
+            context_data = []
+            for record in results:
+                node = record["n"]
+                conns = record["connections"]
+                
+                node_data = dict(node)
+                node_data["type"] = list(node.labels)[0].lower()
+                
+                # Group connections
+                if node_data["type"] == "drug":
+                    node_data["ingredients"] = [c["neighbor_name"] for c in conns if c["rel"] == "CONTAINS"]
+                    node_data["manufacturers"] = [c["neighbor_name"] for c in conns if c["rel"] == "MADE_BY"]
+                    node_data["treated_diseases"] = [c["neighbor_name"] for c in conns if c["rel"] == "TREATS"]
+                    node_data["interactions"] = [
+                        {"name": c["neighbor_name"], "severity": c["rel_props"].get("severity"), "description": c["rel_props"].get("description")} 
+                        for c in conns if c["rel"] == "INTERACTS_WITH"
+                    ]
+                elif node_data["type"] == "disease":
+                    node_data["symptoms"] = [c["neighbor_name"] for c in conns if c["rel"] == "HAS_SYMPTOM"]
+                    node_data["treating_drugs"] = [c["neighbor_name"] for c in conns if c["rel"] == "TREATS" and c["neighbor_label"] == "Drug"]
+                
+                context_data.append(node_data)
+            
+            return context_data
+        except Exception as e:
+            logger.error(f"Error getting subgraph context: {e}")
+            return []
 
     # ============================================
     # INTERACTION OPERATIONS
@@ -287,7 +444,7 @@ class Neo4jService:
             return False
 
     def merge_treats_relationship(
-        self, drug_name: str, disease_name: str, source: str = "openFDA_heuristic"
+        self, drug_name: str, disease_name: str, source: str = "database_first"
     ) -> bool:
         try:
             query = """
@@ -309,7 +466,7 @@ class Neo4jService:
             return False
 
     def merge_has_symptom_relationship(
-        self, disease_name: str, symptom_name: str, source: str = "openFDA_heuristic"
+        self, disease_name: str, symptom_name: str, source: str = "database_first"
     ) -> bool:
         try:
             query = """
@@ -330,27 +487,6 @@ class Neo4jService:
             logger.error(f"Error merging HAS_SYMPTOM relationship: {e}")
             return False
 
-    def merge_side_effect_relationship(
-        self, drug_name: str, side_effect_name: str, source: str = "openFDA_heuristic"
-    ) -> bool:
-        try:
-            query = """
-            MERGE (d:Drug {name: $drug_name})
-            MERGE (s:SideEffect {name: $side_effect_name})
-            MERGE (d)-[r:HAS_SIDE_EFFECT]->(s)
-            SET r.source = $source,
-                r.updated_at = datetime()
-            """
-            self._repository.execute_write(
-                query,
-                drug_name=drug_name.strip(),
-                side_effect_name=side_effect_name.strip(),
-                source=source
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Error merging HAS_SIDE_EFFECT relationship: {e}")
-            return False
 
     def create_interacts_relationship(
         self,
@@ -393,7 +529,7 @@ class Neo4jService:
                 "CREATE CONSTRAINT ingredient_name IF NOT EXISTS FOR (i:Ingredient) REQUIRE i.name IS UNIQUE",
                 "CREATE CONSTRAINT manufacturer_name IF NOT EXISTS FOR (m:Manufacturer) REQUIRE m.name IS UNIQUE",
                 "CREATE CONSTRAINT symptom_name IF NOT EXISTS FOR (s:Symptom) REQUIRE s.name IS UNIQUE",
-                "CREATE CONSTRAINT side_effect_name IF NOT EXISTS FOR (s:SideEffect) REQUIRE s.name IS UNIQUE",
+                "CREATE INDEX drug_brand_name IF NOT EXISTS FOR (d:Drug) ON (d.brand_name)",
                 "CREATE INDEX drug_generic_name IF NOT EXISTS FOR (d:Drug) ON (d.generic_name)",
             ]
             for q in queries:

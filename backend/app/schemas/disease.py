@@ -32,6 +32,7 @@ class DiseaseDetailResponse(DiseaseResponse):
     """Disease detail response with symptoms."""
 
     symptoms: List[DiseaseSymptom] = Field(default_factory=list)
+    treating_drugs: List[str] = Field(default_factory=list)
 
 
 class DiseaseSearchResponse(BaseModel):

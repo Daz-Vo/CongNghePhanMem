@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 import logging
 
-from app.services.import_openfda_service import import_openfda_drugs
-from app.services.neo4j_service import neo4j_service
+# from app.services.import_openfda_service import import_openfda_drugs
+# from app.services.neo4j_service import neo4j_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/import", tags=["import"])
@@ -33,25 +33,7 @@ def import_openfda(
     - total_drugs: Total drug nodes in Neo4j
     - total_diseases: Total disease nodes created
     """
-    logger.info(f"Starting openFDA import: limit={limit}, skip={skip}")
-    try:
-        imported = import_openfda_drugs(limit=limit, skip=skip)
-        stats = neo4j_service.get_graph_stats()
-        total_drugs = stats.get("label_counts", {}).get("Drug", 0)
-        total_diseases = stats.get("label_counts", {}).get("Disease", 0)
-        
-        logger.info(f"✓ Import completed: imported={imported}, total_drugs={total_drugs}")
-        return {
-            "success": True,
-            "imported": imported,
-            "total_drugs_in_neo4j": total_drugs,
-            "total_diseases_in_neo4j": total_diseases,
-            "source": "openFDA drug label API",
-            "pagination": {
-                "skip": skip,
-                "limit": limit,
-            },
-        }
-    except Exception as e:
-        logger.exception(f"✗ Import failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+    raise HTTPException(
+        status_code=410,
+        detail="OpenFDA import has been disabled. Use CSV seed instead."
+    )
