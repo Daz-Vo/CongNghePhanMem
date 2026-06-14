@@ -26,10 +26,6 @@ class DrugRepository:
         WHERE toLower(trim(d.name)) = toLower(trim($name))
            OR toLower(trim(coalesce(d.brand_name, ""))) = toLower(trim($name))
            OR toLower(trim(coalesce(d.generic_name, ""))) = toLower(trim($name))
-        OPTIONAL MATCH (d)-[:CONTAINS]->(i:Ingredient)
-        OPTIONAL MATCH (d)-[:MADE_BY]->(m:Manufacturer)
-        OPTIONAL MATCH (d)-[:TREATS]->(dis:Disease)
-        OPTIONAL MATCH (d)-[int:INTERACTS_WITH]->(d2:Drug)
         RETURN 
             d.name AS name,
             d.brand_name AS brand_name,
@@ -42,14 +38,14 @@ class DrugRepository:
             d.contraindications AS contraindications,
             d.adverse_reactions AS adverse_reactions,
             d.updated_at AS updated_at,
-            collect(DISTINCT i.name) AS ingredients,
-            collect(DISTINCT m.name) AS manufacturers,
-            collect(DISTINCT dis.name) AS treated_diseases,
-            collect({
+            [(d)-[:CONTAINS]->(i:Ingredient) | i.name] AS ingredients,
+            [(d)-[:MADE_BY]->(m:Manufacturer) | m.name] AS manufacturers,
+            [(d)-[:TREATS]->(dis:Disease) | dis.name] AS treated_diseases,
+            [(d)-[int:INTERACTS_WITH]->(d2:Drug) | {
                 name: d2.name,
                 severity: int.severity,
                 description: int.description
-            }) AS interactions
+            }] AS interactions
         """
         try:
             results = self._repository.execute_read(query, name=drug_name)

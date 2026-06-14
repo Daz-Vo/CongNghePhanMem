@@ -119,40 +119,45 @@ class DrugInteractionService:
             moderate = [i for i in interactions if i.get("severity") == "moderate"]
             mild = [i for i in interactions if i.get("severity") == "mild"]
 
+            results = [
+                InteractionResult(
+                    drug_1=inter.get("drug_1", ""),
+                    drug_2=inter.get("drug_2", ""),
+                    has_interaction=True,
+                    severity=inter.get("severity", "unknown"),
+                    description=inter.get("description"),
+                )
+                for inter in interactions
+            ]
+
             result = {
-                "total_drugs": len(drug_names),
-                "total_interactions": len(interactions),
-                "by_severity": {
-                    "severe": len(severe),
-                    "moderate": len(moderate),
-                    "mild": len(mild),
-                },
-                "interactions": interactions,
+                "drug_names": drug_names,
+                "interactions": results,
                 "is_safe": len(severe) == 0,
                 "warnings": [],
+                "summary": f"Found {len(interactions)} interactions between {len(drug_names)} drugs.",
             }
 
             if severe:
                 result["warnings"].append(
-                    f"⚠️  SEVERE: {len(severe)} severe interactions found"
+                    f"⚠️ SEVERE: {len(severe)} severe interactions found"
                 )
             if moderate:
                 result["warnings"].append(
-                    f"⚠️  MODERATE: {len(moderate)} moderate interactions found"
+                    f"⚠️ MODERATE: {len(moderate)} moderate interactions found"
                 )
 
-            logger.info(f"Drug combination analysis: {result['total_interactions']} interactions found")
+            logger.info(f"Drug combination analysis: {len(interactions)} interactions found")
             return result
 
         except Exception as exc:
             logger.error(f"Error analyzing drug combinations: {exc}")
             return {
-                "total_drugs": len(drug_names),
-                "total_interactions": 0,
-                "by_severity": {"severe": 0, "moderate": 0, "mild": 0},
+                "drug_names": drug_names,
                 "interactions": [],
                 "is_safe": True,
                 "warnings": [],
+                "summary": "Failed to analyze interactions",
             }
 
 

@@ -48,8 +48,8 @@ class DiseaseRepository:
         """
         cypher_query = """
         MATCH (d:Disease)
-        WHERE toLower(d.name) CONTAINS toLower($query) 
-           OR toLower(d.description) CONTAINS toLower($query)
+        WHERE toLower(coalesce(d.name, "")) CONTAINS toLower($search_query) 
+           OR toLower(coalesce(d.description, "")) CONTAINS toLower($search_query)
         RETURN 
             d.name AS name,
             d.description AS description,
@@ -59,7 +59,7 @@ class DiseaseRepository:
         """
         try:
             results = self._repository.execute_read(
-                cypher_query, query=query_str, limit=limit, skip=skip
+                cypher_query, search_query=query_str, limit=limit, skip=skip
             )
             return results if results else []
         except Exception as exc:

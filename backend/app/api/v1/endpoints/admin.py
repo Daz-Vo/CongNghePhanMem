@@ -105,11 +105,19 @@ def admin_get_stats(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     from app.repositories import user_repository
+    from app.services.search_history_service import search_history_service
+    from app.services.chat_service import chat_service
+    
     user_stats = user_repository.get_user_stats(db)
     graph_stats = neo4j_service.get_graph_stats()
+    top_medicines = search_history_service.get_top_searches(db, item_type="medicine", limit=5)
+    chat_topics = chat_service.get_chat_topic_stats(db)
+    
     return {
         "users": user_stats,
-        "graph": graph_stats
+        "graph": graph_stats,
+        "top_medicines": top_medicines,
+        "chat_topics": chat_topics
     }
 
 @router.get("/ai-logs", response_model=AILogResponse)
@@ -128,7 +136,7 @@ def admin_get_ai_logs(
     skip = (page - 1) * limit
     logs = chat_service.get_all_chat_logs(db, user_id=user_id, limit=limit, skip=skip)
     total = chat_service.get_chat_logs_count(db, user_id=user_id)
-    return AILogResponse(total=total, items=logs, page=page, limit=limit)
+    return {"total": total, "items": logs, "page": page, "limit": limit}
 
 # Admin Medicine CRUD
 @router.post("/medicines", response_model=MedicineDetailResponse, status_code=201)

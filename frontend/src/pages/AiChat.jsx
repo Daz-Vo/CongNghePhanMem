@@ -1,0 +1,226 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { ChatService } from '../client';
+import { useUser } from '../context/UserContext';
+
+const WELCOME_MSG = {
+  id: 'welcome',
+  role: 'ai',
+  text: "Xin chào! Tôi là trợ lý y tế AI. Tôi có thể giúp bạn tìm hiểu về triệu chứng, thuốc, hoặc kiểm tra tương tác thuốc.",
+  suggestions: ['Tác dụng phụ của Ibuprofen', 'Tăng huyết áp là gì?', 'Kiểm tra tương tác thuốc'],
+};
+
+const AiChat = () => {
+  const { user } = useUser();
+  const [messages, setMessages] = useState([WELCOME_MSG]);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const bottomRef = useRef(null);
+
+  // Load chat history from API
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const data = await ChatService.getChatHistoryApiV1ChatHistoryGet({ limit: 20 });
+        setChatHistory(data?.items || []);
+
+        // If there is prior history, restore the last session as messages
+        if (data?.items?.length > 0) {
+          const restored = [];
+          data.items.slice().reverse().forEach(item => {
+            restored.push({ id: `u-${item.id}`, role: 'user', text: item.message });
+            restored.push({
+              id: `a-${item.id}`,
+              role: 'ai',
+              text: item.response,
+              intent: item.intent,
+            });
+          });
+          setMessages([WELCOME_MSG, ...restored]);
+        }
+      } catch (err) {
+        console.error('Failed to load chat history', err);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+    fetchHistory();
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async (text) => {
+    const msgText = text || input;
+    if (!msgText.trim() || sending) return;
+
+    const userMsg = { id: Date.now(), role: 'user', text: msgText };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setSending(true);
+
+    // Add typing indicator
+    const typingId = Date.now() + 0.5;
+    setMessages(prev => [...prev, { id: typingId, role: 'ai', typing: true }]);
+
+    try {
+      const response = await ChatService.askQuestionApiV1ChatAskPost({
+        requestBody: {
+          message: msgText
+        }
+      });
+      setMessages(prev => prev.filter(m => m.id !== typingId));
+      const aiReply = {
+        id: Date.now() + 1,
+        role: 'ai',
+        text: response.answer,
+        sources: response.sources || [],
+        warnings: response.warnings || [],
+        entities: response.entities || [],
+      };
+      setMessages(prev => [...prev, aiReply]);
+      // Refresh history list
+      ChatService.getChatHistoryApiV1ChatHistoryGet({ limit: 20 })
+        .then(d => setChatHistory(d?.items || []))
+        .catch(() => {});
+    } catch (err) {
+      setMessages(prev => prev.filter(m => m.id !== typingId));
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        role: 'ai',
+        text: "Xin lỗi, tôi gặp lỗi kết nối đến máy chủ. Vui lòng thử lại.",
+      }]);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const initials = user?.full_name
+    ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U';
+
+
+
+  return (
+    <div className="flex flex-row h-[calc(100vh-4rem)]">
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col relative bg-background min-w-0">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col gap-6 pb-36">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex gap-4 max-w-3xl mx-auto w-full ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              {msg.role === 'ai' ? (
+                <div className="w-8 h-8 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-primary-foreground">
+                  <iconify-icon icon="lucide:bot" class="text-lg"></iconify-icon>
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary/10 border border-border flex-shrink-0 flex items-center justify-center text-primary text-sm font-bold">
+                  {initials}
+                </div>
+              )}
+
+              <div className={`flex-1 ${msg.role === 'user' ? 'flex flex-col items-end' : 'space-y-2'}`}>
+                <p className="text-sm font-medium text-foreground mb-1">
+                  {msg.role === 'ai' ? 'MediAI Assistant' : (user?.full_name || 'You')}
+                </p>
+
+                {msg.typing ? (
+                  <div className="flex items-center gap-2 px-5 py-3 bg-secondary rounded-2xl rounded-tl-sm w-fit">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    </div>
+                  </div>
+                ) : msg.role === 'user' ? (
+                  <div className="bg-primary text-primary-foreground px-5 py-3 rounded-2xl rounded-tr-sm text-base leading-relaxed max-w-[85%]">
+                    {msg.text}
+                  </div>
+                ) : (
+                  <div className="text-base text-foreground leading-relaxed whitespace-pre-wrap">
+                    {msg.text}
+                  </div>
+                )}
+
+                {/* Warnings */}
+                {msg.warnings?.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 mt-2">
+                    <iconify-icon icon="lucide:triangle-alert" class="text-amber-600 text-xl flex-shrink-0 mt-0.5"></iconify-icon>
+                    <div>
+                      {msg.warnings.map((w, i) => (
+                        <p key={i} className="text-sm text-amber-800">{w}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Suggestions */}
+                {msg.suggestions && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {msg.suggestions.map((s) => (
+                      <button key={s} onClick={() => sendMessage(s)} className="px-3 py-1.5 bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 rounded-full text-xs font-medium border border-border transition-colors">
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Sources */}
+                {msg.sources?.length > 0 && (
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+                    <span className="text-xs font-medium text-muted-foreground">Sources:</span>
+                    {msg.sources.map((src) => (
+                      <span key={src} className="px-2 py-1 bg-secondary rounded text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                        <iconify-icon icon="lucide:link"></iconify-icon> {src}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input area */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-6 px-4 md:px-8">
+          <div className="max-w-3xl mx-auto w-full relative">
+            <div className="bg-card border border-border rounded-3xl p-2 shadow-lg flex items-end gap-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+              <textarea
+                rows={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKey}
+                disabled={sending}
+                placeholder="Hỏi về triệu chứng, thuốc, hoặc tương tác thuốc..."
+                className="w-full max-h-32 bg-transparent border-none focus:ring-0 resize-none py-3 px-2 text-sm text-foreground placeholder:text-muted-foreground outline-none disabled:opacity-50"
+                style={{ minHeight: '44px' }}
+              />
+              <button
+                onClick={() => sendMessage()}
+                disabled={sending || !input.trim()}
+                className="p-2.5 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors flex-shrink-0 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <iconify-icon icon={sending ? 'lucide:loader-circle' : 'lucide:send'} class="text-xl"></iconify-icon>
+              </button>
+            </div>
+            <div className="text-center mt-3">
+              <p className="text-[10px] text-muted-foreground">MediAI có thể mắc lỗi. Luôn xác minh thông tin y tế quan trọng với chuyên gia y tế.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AiChat;

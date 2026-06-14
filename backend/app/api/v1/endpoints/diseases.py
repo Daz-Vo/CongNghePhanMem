@@ -15,7 +15,7 @@ router = APIRouter(prefix="/diseases", tags=["diseases"])
 
 @router.get("/search", response_model=DiseaseSearchResponse)
 def search_diseases(
-    q: str = Query(..., min_length=1, max_length=255, description="Search query"),
+    q: str = Query(..., min_length=0, max_length=255, description="Search query"),
     limit: int = Query(10, ge=1, le=100, description="Max results"),
     skip: int = Query(0, ge=0, description="Number of results to skip"),
 ):

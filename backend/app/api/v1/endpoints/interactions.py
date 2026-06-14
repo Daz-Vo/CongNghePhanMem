@@ -3,7 +3,12 @@ Drug interaction endpoints.
 Handles drug interaction checks.
 """
 
-from fastapi import APIRouter, HTTPException, Query, Path, status
+from fastapi import APIRouter, HTTPException, Query, Path, status, Depends
+from typing import Annotated, Optional
+from sqlalchemy.orm import Session
+from app.api.v1.endpoints.deps import get_db, get_optional_current_user, get_current_user
+from app.repositories import interaction_history_repository
+from app.models.user import User
 import logging
 
 from app.services.drug_interaction_service import drug_interaction_service
@@ -18,6 +23,16 @@ from app.schemas.interaction import (
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/interactions", tags=["interactions"])
 
+@router.get("/history/count")
+def get_interaction_history_count(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Get the total number of interaction checks performed by the user.
+    """
+    count = interaction_history_repository.get_user_interaction_count(db, current_user.id)
+    return {"total": count}
 
 @router.get("/{drug_name}", response_model=InteractionListResponse)
 def get_drug_interactions(
@@ -115,12 +130,17 @@ def assess_interaction(
 @router.post("/analyze-combination", response_model=InteractionSummaryResponse)
 def analyze_drug_combination(
     request: InteractionCheckRequest,
+    current_user: Annotated[Optional[User], Depends(get_optional_current_user)],
+    db: Annotated[Session, Depends(get_db)]
 ):
     """
     Analyze a combination of medicines to identify safe and unsafe combinations.
     """
     logger.info(f"POST /api/v1/interactions/analyze-combination with medicines: {request.drug_names}")
     try:
+        if current_user:
+            interaction_history_repository.log_interaction_check(db, current_user.id, request.drug_names)
+            
         result = drug_interaction_service.get_safe_drug_combinations(request.drug_names)
         return InteractionSummaryResponse(**result)
     except Exception as exc:

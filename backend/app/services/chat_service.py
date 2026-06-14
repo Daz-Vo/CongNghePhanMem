@@ -138,5 +138,17 @@ class ChatService:
             query = query.filter(ChatHistory.user_id == user_id)
         return query.count()
 
+    def get_chat_topic_stats(self, db: Session) -> Dict[str, Any]:
+        """Admin: Get stats for chat topics."""
+        from sqlalchemy import func
+        stats = db.query(ChatHistory.intent, func.count(ChatHistory.id)).group_by(ChatHistory.intent).all()
+        topic_counts = {item[0] or "unknown": item[1] for item in stats}
+        total = sum(topic_counts.values()) or 1
+        
+        return {
+            "counts": topic_counts,
+            "total": sum(topic_counts.values())
+        }
+
 chat_service = ChatService()
 

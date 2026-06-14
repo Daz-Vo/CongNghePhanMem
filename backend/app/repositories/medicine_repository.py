@@ -22,14 +22,10 @@ class MedicineRepository:
         Get a medicine by exact name with all related information.
         """
         query = """
-        MATCH (m:Medicine)
+        MATCH (m:Drug)
         WHERE toLower(trim(m.name)) = toLower(trim($name))
            OR toLower(trim(coalesce(m.brand_name, ""))) = toLower(trim($name))
            OR toLower(trim(coalesce(m.generic_name, ""))) = toLower(trim($name))
-        OPTIONAL MATCH (m)-[:CONTAINS]->(i:Ingredient)
-        OPTIONAL MATCH (m)-[:MANUFACTURED_BY]->(man:Manufacturer)
-        OPTIONAL MATCH (m)-[:TREATS]->(dis:Disease)
-        OPTIONAL MATCH (m)-[int:INTERACTS_WITH]->(m2:Medicine)
         RETURN 
             m.name AS name,
             m.brand_name AS brand_name,
@@ -42,14 +38,14 @@ class MedicineRepository:
             m.contraindications AS contraindications,
             m.adverse_reactions AS adverse_reactions,
             m.updated_at AS updated_at,
-            collect(DISTINCT i.name) AS ingredients,
-            collect(DISTINCT man.name) AS manufacturers,
-            collect(DISTINCT dis.name) AS treated_diseases,
-            collect({
+            [(m)-[:CONTAINS]->(i:Ingredient) | i.name] AS ingredients,
+            [(m)-[:MANUFACTURED_BY]->(man:Manufacturer) | man.name] AS manufacturers,
+            [(m)-[:TREATS]->(dis:Disease) | dis.name] AS treated_diseases,
+            [(m)-[int:INTERACTS_WITH]->(m2:Drug) | {
                 name: m2.name,
                 severity: int.severity,
                 description: int.description
-            }) AS interactions
+            }] AS interactions
         """
         try:
             results = self._repository.execute_read(query, name=name)
@@ -65,10 +61,10 @@ class MedicineRepository:
         Search for medicines by name, brand name, or generic name.
         """
         cypher_query = """
-        MATCH (m:Medicine)
-        WHERE toLower(coalesce(m.name, "")) CONTAINS toLower($query) 
-           OR toLower(coalesce(m.brand_name, "")) CONTAINS toLower($query) 
-           OR toLower(coalesce(m.generic_name, "")) CONTAINS toLower($query)
+        MATCH (m:Drug)
+        WHERE toLower(coalesce(m.name, "")) CONTAINS toLower($search_query) 
+           OR toLower(coalesce(m.brand_name, "")) CONTAINS toLower($search_query) 
+           OR toLower(coalesce(m.generic_name, "")) CONTAINS toLower($search_query)
         RETURN 
             m.name AS name,
             m.brand_name AS brand_name,
@@ -82,7 +78,7 @@ class MedicineRepository:
         """
         try:
             results = self._repository.execute_read(
-                cypher_query, query=query_str, limit=limit, skip=skip
+                cypher_query, search_query=query_str, limit=limit, skip=skip
             )
             return results if results else []
         except Exception as exc:
@@ -97,7 +93,7 @@ class MedicineRepository:
         """
         query = """
         MATCH (disease:Disease {name: $disease_name})
-        MATCH (medicine:Medicine)-[:TREATS]->(disease)
+        MATCH (medicine:Drug)-[:TREATS]->(disease)
         RETURN 
             medicine.name AS name,
             medicine.brand_name AS brand_name,
@@ -123,7 +119,7 @@ class MedicineRepository:
         """
         query = """
         MATCH (medicine:Medicine {name: $name})
-        MATCH (medicine)-[int:INTERACTS_WITH]->(m2:Medicine)
+        MATCH (medicine)-[int:INTERACTS_WITH]->(m2:Drug)
         RETURN 
             m2.name AS name,
             m2.brand_name AS brand_name,
@@ -152,7 +148,7 @@ class MedicineRepository:
             return []
 
         query = """
-        MATCH (m1:Medicine)-[int:INTERACTS_WITH]->(m2:Medicine)
+        MATCH (m1:Drug)-[int:INTERACTS_WITH]->(m2:Drug)
         WHERE m1.name IN $names AND m2.name IN $names
         RETURN 
             m1.name AS medicine_1,
@@ -189,7 +185,7 @@ class MedicineRepository:
         """
         Get total count of medicines in database.
         """
-        query = "MATCH (m:Medicine) RETURN COUNT(m) AS count"
+        query = "MATCH (m:Drug) RETURN COUNT(m) AS count"
         try:
             results = self._repository.execute_read(query)
             if results:
