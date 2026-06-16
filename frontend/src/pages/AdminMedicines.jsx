@@ -45,13 +45,13 @@ const AdminMedicines = () => {
   const closeModal = () => setModal(null);
 
   const handleDelete = async (name) => {
-    if (window.confirm(`Bạn có chắc muốn xóa thuốc ${name}?`)) {
+    if (window.confirm(`Are you sure you want to delete medicine ${name}?`)) {
       try {
         await AdminService.deleteMedicineApiV1AdminMedicinesIdDelete({ id: name });
         setMedicines(prev => prev.filter(m => m.name !== name));
       } catch (err) {
         console.error('Failed to delete medicine', err);
-        alert('Lỗi xóa thuốc');
+        alert('Failed to delete medicine');
       }
     }
   };
@@ -78,7 +78,7 @@ const AdminMedicines = () => {
       closeModal();
     } catch (err) {
       console.error('Failed to update medicine', err);
-      alert('Lỗi cập nhật thuốc');
+      alert('Failed to update medicine');
     }
   };
 
@@ -100,7 +100,7 @@ const AdminMedicines = () => {
       closeModal();
     } catch (err) {
       console.error('Failed to create medicine', err);
-      alert('Lỗi thêm thuốc');
+      alert('Failed to add medicine');
     }
   };
 
@@ -189,13 +189,13 @@ const AdminMedicines = () => {
                       <td className="px-6 py-4 text-sm text-muted-foreground">{m.manufacturer || '—'}</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openView(m)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="Xem chi tiết">
-                            <iconify-icon icon="lucide:eye"></iconify-icon>
-                          </button>
-                          <button onClick={() => openEdit(m)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="Chỉnh sửa">
-                            <iconify-icon icon="lucide:pencil"></iconify-icon>
-                          </button>
-                          <button onClick={() => handleDelete(m.name)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-destructive transition-colors" title="Xóa">
+                        <button onClick={() => openView(m)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="View details">
+                          <iconify-icon icon="lucide:eye"></iconify-icon>
+                        </button>
+                        <button onClick={() => openEdit(m)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="Edit">
+                          <iconify-icon icon="lucide:pencil"></iconify-icon>
+                        </button>
+                        <button onClick={() => handleDelete(m.name)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-destructive transition-colors" title="Delete">
                             <iconify-icon icon="lucide:trash-2"></iconify-icon>
                           </button>
                         </div>

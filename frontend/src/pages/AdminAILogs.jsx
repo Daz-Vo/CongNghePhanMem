@@ -6,6 +6,15 @@ const AdminAILogs = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  // Model Config State
+  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [apiKey, setApiKey] = useState('');
+  const [quotaUsed, setQuotaUsed] = useState(0); // Real count
+  const [quotaPercent, setQuotaPercent] = useState(0);
+  const [configSaving, setConfigSaving] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
 
   const fetchLogs = async (pageNum = 1) => {
     try {
@@ -15,6 +24,24 @@ const AdminAILogs = () => {
         setLogs(data.items || []);
       } else {
         setLogs(prev => [...prev, ...(data.items || [])]);
+      }
+      // Also fetch ai-config
+      try {
+        const token = localStorage.getItem('access_token');
+        const configRes = await fetch('http://localhost:8000/api/v1/admin/ai-config', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (configRes.ok) {
+          const config = await configRes.json();
+          if (config.model) setSelectedModel(config.model);
+          if (config.api_key) setApiKey(config.api_key);
+          if (config.quota_used !== undefined) {
+            setQuotaUsed(config.quota_used);
+            setQuotaPercent(Math.min(100, Math.round((config.quota_used / 30000) * 100)));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch ai config", e);
       }
       setHasMore(data.items?.length === 10);
     } catch (err) {
@@ -39,6 +66,57 @@ const AdminAILogs = () => {
     return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
+  const saveConfig = async () => {
+    try {
+      setConfigSaving(true);
+      setTestResult(null);
+      const token = localStorage.getItem('access_token');
+      const res = await fetch('http://localhost:8000/api/v1/admin/ai-config', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ model: selectedModel, api_key: apiKey })
+      });
+      if (res.ok) {
+        alert("Configuration saved successfully!");
+      } else {
+        alert("Failed to save configuration.");
+      }
+    } catch (e) {
+      alert("Error saving configuration.");
+    } finally {
+      setConfigSaving(false);
+    }
+  };
+
+  const testConnection = async () => {
+    if (!apiKey) {
+      alert("Please enter an API Key to test.");
+      return;
+    }
+    try {
+      setTestingConnection(true);
+      setTestResult(null);
+      const token = localStorage.getItem('access_token');
+      const res = await fetch('http://localhost:8000/api/v1/admin/ai-config/test', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ api_key: apiKey })
+      });
+      const data = await res.json();
+      setTestResult({ success: data.success, message: data.message });
+    } catch (e) {
+      setTestResult({ success: false, message: "Network error during test." });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -61,36 +139,108 @@ const AdminAILogs = () => {
             <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full border border-primary/20">v4.2 Active</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Active model - static display */}
-            <div className="p-4 border border-border rounded-lg bg-background flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                <iconify-icon icon="lucide:bot" class="text-xl"></iconify-icon>
-              </div>
+            <div className="space-y-4">
+              {/* Active model */}
               <div>
-                <p className="text-xs text-muted-foreground mb-0.5 uppercase tracking-wider font-semibold">Active AI Model</p>
-                <p className="text-sm font-semibold text-foreground">MedGPT-4.2 (Production)</p>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Active AI Model</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                    <iconify-icon icon="lucide:bot"></iconify-icon>
+                  </div>
+                  <select 
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full bg-background border border-input rounded-lg pl-10 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
+                  >
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Google)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Google)</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Stable)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Preview - High Load)</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-muted-foreground">
+                    <iconify-icon icon="lucide:chevron-down"></iconify-icon>
+                  </div>
+                </div>
+              </div>
+
+              {/* API Key */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Provider API Key</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                    <iconify-icon icon="lucide:key"></iconify-icon>
+                  </div>
+                  <input 
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="w-full bg-background border border-input rounded-lg pl-10 pr-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                    placeholder="Enter API Key"
+                  />
+                </div>
+              </div>
+
+              {/* Quota Usage */}
+              <div className="p-4 border border-border rounded-lg bg-muted/20">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <iconify-icon icon="lucide:activity" class="text-primary"></iconify-icon> API Quota Usage (This Month)
+                  </span>
+                  <span className="text-sm font-semibold text-foreground">{quotaPercent}%</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5">
+                  <div className="bg-primary h-2.5 rounded-full" style={{ width: `${quotaPercent}%` }}></div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">{quotaUsed.toLocaleString()} / 30,000 requests used</p>
               </div>
             </div>
+
             {/* Active Modules */}
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-foreground">Active Modules</label>
-              {[
-                { label: 'Symptom Checker', checked: true },
-                { label: 'Medication Interaction Check', checked: true },
-              ].map((item) => (
-                <label key={item.label} className="flex items-center justify-between cursor-pointer group">
-                  <span className="text-sm text-foreground group-hover:text-primary transition-colors">{item.label}</span>
-                  <div className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked={item.checked} readOnly />
-                    <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                  </div>
-                </label>
-              ))}
+            <div className="space-y-4 bg-background p-5 border border-border rounded-xl shadow-sm">
+              <label className="block text-sm font-bold text-foreground border-b border-border pb-3 flex items-center gap-2">
+                <iconify-icon icon="lucide:blocks" class="text-primary"></iconify-icon> Feature Modules
+              </label>
+              <div className="space-y-4 pt-2">
+                {[
+                  { label: 'Symptom Checker', checked: true, desc: 'Analyze user symptoms' },
+                  { label: 'Medication Interaction Check', checked: true, desc: 'Check Neo4j for drug interactions' },
+                  { label: 'Web Search Fallback', checked: false, desc: 'Search web if DB fails' },
+                ].map((item) => (
+                  <label key={item.label} className="flex items-start justify-between cursor-pointer group">
+                    <div>
+                      <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{item.label}</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                    </div>
+                    <div className="relative inline-flex items-center cursor-pointer mt-1">
+                      <input type="checkbox" className="sr-only peer" defaultChecked={item.checked} />
+                      <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
+            
+            {testResult && (
+              <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 text-sm ${testResult.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                <iconify-icon icon={testResult.success ? "lucide:check-circle" : "lucide:alert-circle"}></iconify-icon>
+                <span>{testResult.message}</span>
+              </div>
+            )}
           </div>
-          <div className="mt-6 pt-4 border-t border-border flex justify-end">
-            <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
-              Save Configuration
+          <div className="mt-6 pt-5 border-t border-border flex justify-end gap-3">
+            <button 
+              onClick={testConnection}
+              disabled={testingConnection}
+              className="px-5 py-2 rounded-lg text-sm font-medium border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              {testingConnection ? 'Testing...' : 'Test Connection'}
+            </button>
+            <button 
+              onClick={saveConfig}
+              disabled={configSaving}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <iconify-icon icon="lucide:save"></iconify-icon> {configSaving ? 'Saving...' : 'Save Configuration'}
             </button>
           </div>
         </div>

@@ -323,29 +323,40 @@ class Neo4jService:
             return []
             
         try:
+            logger.info(f"Neo4j subgraph context lookup for drugs={drug_names}, diseases={disease_names}")
             query = """
             MATCH (n)
-            WHERE (n:Drug AND n.name IN $drugs) OR (n:Disease AND n.name IN $diseases)
+            WHERE (n:Drug AND (
+                toLower(trim(n.name)) IN $drugs
+                OR toLower(trim(coalesce(n.brand_name, ''))) IN $drugs
+                OR toLower(trim(coalesce(n.generic_name, ''))) IN $drugs
+            ))
+            OR (n:Disease AND toLower(trim(n.name)) IN $diseases)
             
             OPTIONAL MATCH (n)-[r]-(m)
             WHERE type(r) IN ['TREATS', 'HAS_SYMPTOM', 'CONTAINS', 'MADE_BY', 'INTERACTS_WITH']
             
-            RETURN n, collect({
+            RETURN n, labels(n) AS node_labels, collect({
                 rel: type(r),
                 neighbor_label: labels(m)[0],
                 neighbor_name: m.name,
                 rel_props: properties(r)
             }) AS connections
             """
-            results = self._repository.execute_read(query, drugs=drug_names, diseases=disease_names)
+            results = self._repository.execute_read(
+                query,
+                drugs=[d.lower().strip() for d in drug_names],
+                diseases=[d.lower().strip() for d in disease_names]
+            )
             
             context_data = []
             for record in results:
                 node = record["n"]
+                node_labels = record.get("node_labels", [])
                 conns = record["connections"]
                 
                 node_data = dict(node)
-                node_data["type"] = list(node.labels)[0].lower()
+                node_data["type"] = node_labels[0].lower() if node_labels else "unknown"
                 
                 # Group connections
                 if node_data["type"] == "drug":

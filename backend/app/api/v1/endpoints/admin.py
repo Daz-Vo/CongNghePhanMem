@@ -138,6 +138,58 @@ def admin_get_ai_logs(
     total = chat_service.get_chat_logs_count(db, user_id=user_id)
     return {"total": total, "items": logs, "page": page, "limit": limit}
 
+from pydantic import BaseModel
+class AIConfigUpdate(BaseModel):
+    model: str
+    api_key: str
+
+@router.get("/ai-config")
+def admin_get_ai_config(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    from app.core.ai_settings_store import get_ai_settings
+    from app.services.chat_service import chat_service
+    config = get_ai_settings()
+    quota_used = chat_service.get_monthly_ai_usage(db)
+    return {"model": config["model"], "api_key": config["api_key"], "quota_used": quota_used}
+
+@router.post("/ai-config")
+def admin_update_ai_config(
+    config_in: AIConfigUpdate,
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    from app.core.ai_settings_store import save_ai_settings
+    save_ai_settings(config_in.model, config_in.api_key)
+    return {"success": True}
+
+class AITestRequest(BaseModel):
+    api_key: str
+
+@router.post("/ai-config/test")
+async def admin_test_ai_config(
+    test_in: AITestRequest,
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    import httpx
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models?key={test_in.api_key}"
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(endpoint, timeout=10)
+            if resp.status_code == 200:
+                return {"success": True, "message": "Connection successful"}
+            else:
+                return {"success": False, "message": f"Invalid API Key. Status: {resp.status_code}"}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+
 # Admin Medicine CRUD
 @router.post("/medicines", response_model=MedicineDetailResponse, status_code=201)
 def admin_create_medicine(

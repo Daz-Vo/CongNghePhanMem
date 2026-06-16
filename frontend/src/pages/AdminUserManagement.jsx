@@ -88,7 +88,7 @@ const AdminUserManagement = () => {
       closeEdit();
     } catch (err) {
       console.error('Failed to update role', err);
-      alert('Lỗi cập nhật quyền');
+      alert('Failed to update role');
     }
   };
 
@@ -103,7 +103,7 @@ const AdminUserManagement = () => {
       setUsers(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
     } catch (err) {
       console.error('Failed to toggle status', err);
-      alert('Lỗi thay đổi trạng thái');
+      alert('Failed to change status');
     }
   };
 
@@ -165,14 +165,14 @@ const AdminUserManagement = () => {
                           <button
                             onClick={() => openEdit(u)}
                             className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-                            title="Chỉnh sửa Role"
+                            title="Edit Role"
                           >
                             <iconify-icon icon="lucide:pencil"></iconify-icon>
                           </button>
                           <button
                             onClick={() => handleToggleStatus(u.id, u.status)}
                             className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-                            title="Khóa/Mở tài khoản"
+                            title="Block/Unblock account"
                           >
                             <iconify-icon icon={u.status === 'Suspended' ? 'lucide:lock' : 'lucide:lock-open'}></iconify-icon>
                           </button>
