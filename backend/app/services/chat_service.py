@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.services.ner_service import ner_service
 from app.services.llm_service import llm_service
 from app.services.neo4j_service import neo4j_service
+from app.services.wikipedia_service import wikipedia_service
 from app.models.chat import ChatHistory
 from app.schemas.chat import ChatMessageResponse
 
@@ -65,6 +66,51 @@ class ChatService:
         
         return "", [], []
 
+    async def _fetch_wikipedia_context(
+        self, 
+        entities: Dict[str, List[str]], 
+        language: str = "en"
+    ) -> Tuple[str, List[str]]:
+        """
+        Fetch medical information from Wikipedia for entities.
+        Returns: (context_json_string, sources_list)
+        """
+        drugs = entities.get("drugs", [])
+        diseases = entities.get("diseases", [])
+        all_terms = drugs + diseases
+        
+        if not all_terms:
+            return "", []
+        
+        try:
+            # Convert language name to code for Wikipedia
+            lang_code = "vi" if language.lower() in ["vietnamese", "vi"] else "en"
+            
+            # Fetch Wikipedia summaries for all terms
+            wiki_data = await wikipedia_service.extract_medical_context(all_terms, language=lang_code)
+            
+            sources = []
+            context_entries = []
+            
+            for term, summary in wiki_data.items():
+                if summary:
+                    context_entries.append({
+                        "term": term,
+                        "source": "Wikipedia",
+                        "summary": summary
+                    })
+                    sources.append(f"Wikipedia: {term}")
+            
+            if context_entries:
+                context_str = json.dumps(context_entries, indent=2, ensure_ascii=False)
+                return context_str, sources
+            
+            return "", []
+            
+        except Exception as e:
+            logger.error(f"Error fetching Wikipedia context: {e}")
+            return "", []
+
     async def process_chat(self, db: Session, user_id: Optional[int], message: str) -> ChatMessageResponse:
         start_time = time.time()
         try:
@@ -72,20 +118,48 @@ class ChatService:
             lang = await llm_service.detect_language(message)
             logger.info(f"Detected language: {lang}")
 
+            # Translate to English for NER
+            process_message = message
+            if lang != "English":
+                from deep_translator import GoogleTranslator
+                try:
+                    process_message = GoogleTranslator(source='auto', target='en').translate(message)
+                    logger.info(f"Translated message for NER: {process_message}")
+                except Exception as e:
+                    logger.error(f"Translation failed: {e}")
+
             # 2. NER
-            entities = ner_service.extract_entities(message)
+            entities = ner_service.extract_entities(process_message)
             all_entity_names = entities.get("drugs", []) + entities.get("diseases", [])
             logger.info(f"NER Entities: {entities}")
             
             # 3. Intent & Context Retrieval
             intent = self._detect_intent(message)
-            context, sources, warnings = self._build_context(entities, intent)
             
-            logger.info(f"RAG Context length: {len(context)} chars")
+            # Get Neo4j context (primary)
+            neo4j_context, neo4j_sources, warnings = self._build_context(entities, intent)
+            
+            # Get Wikipedia context (secondary) - non-blocking
+            wiki_context, wiki_sources = await self._fetch_wikipedia_context(entities, language=lang)
+            
+            # Combine contexts: Neo4j first (higher priority), then Wikipedia
+            combined_context = neo4j_context
+            all_sources = neo4j_sources.copy()
+            
+            # Add Wikipedia if no Neo4j data
+            if not neo4j_context and wiki_context:
+                combined_context = wiki_context
+                all_sources.extend(wiki_sources)
+            elif wiki_context:
+                # Append Wikipedia as supplementary context
+                if combined_context:
+                    combined_context += f"\n\nWIKIPEDIA_CONTEXT:\n{wiki_context}"
+                all_sources.extend(wiki_sources)
+            
+            logger.info(f"RAG Context length: {len(combined_context)} chars | Sources: {all_sources}")
             
             # 4. LLM Generation
-            # Prompt is now handled by llm_service with SYSTEM_PROMPT including language rules
-            answer = await llm_service.generate_response(message, context)
+            answer = await llm_service.generate_response(message, combined_context, language=lang)
             
             # 5. Update History
             if user_id is not None:
@@ -100,12 +174,12 @@ class ChatService:
                 db.commit()
             
             process_time = time.time() - start_time
-            logger.info(f"Chat processing completed in {process_time:.2f}s | Lang: {lang} | Source: {sources or 'LLM Knowledge'}")
+            logger.info(f"Chat processing completed in {process_time:.2f}s | Lang: {lang} | Sources: {all_sources or 'LLM Knowledge'}")
 
             return ChatMessageResponse(
                 answer=answer,
                 entities=all_entity_names,
-                sources=sources if sources else ["AI Base Knowledge"],
+                sources=all_sources if all_sources else ["AI Base Knowledge"],
                 warnings=warnings
             )
         except Exception as e:
@@ -149,6 +223,16 @@ class ChatService:
             "counts": topic_counts,
             "total": sum(topic_counts.values())
         }
+
+    def get_monthly_ai_usage(self, db: Session) -> int:
+        from sqlalchemy import extract
+        from datetime import datetime
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        return db.query(ChatHistory).filter(
+            extract('month', ChatHistory.created_at) == current_month,
+            extract('year', ChatHistory.created_at) == current_year
+        ).count()
 
 chat_service = ChatService()
 

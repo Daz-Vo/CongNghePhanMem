@@ -1,233 +1,167 @@
-# Full Stack FastAPI Template
 
-<a href="https://github.com/fastapi/full-stack-fastapi-template/actions?query=workflow%3A%22Test+Docker+Compose%22" target="_blank"><img src="https://github.com/fastapi/full-stack-fastapi-template/workflows/Test%20Docker%20Compose/badge.svg" alt="Test Docker Compose"></a>
-<a href="https://github.com/fastapi/full-stack-fastapi-template/actions?query=workflow%3A%22Test+Backend%22" target="_blank"><img src="https://github.com/fastapi/full-stack-fastapi-template/workflows/Test%20Backend/badge.svg" alt="Test Backend"></a>
-<a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/fastapi/full-stack-fastapi-template" target="_blank"><img src="https://coverage-badge.samuelcolvin.workers.dev/fastapi/full-stack-fastapi-template.svg" alt="Coverage"></a>
+---
 
-## Technology Stack and Features
+# Medical Chatbot
 
-- ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
-  - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the Python SQL database interactions (ORM).
-  - 🔍 [Pydantic](https://docs.pydantic.dev), used by FastAPI, for the data validation and settings management.
-  - 💾 [PostgreSQL](https://www.postgresql.org) as the SQL database.
-- 🚀 [React](https://react.dev) for the frontend.
-  - 💃 Using TypeScript, hooks, [Vite](https://vitejs.dev), and other parts of a modern frontend stack.
-  - 🎨 [Tailwind CSS](https://tailwindcss.com) and [shadcn/ui](https://ui.shadcn.com) for the frontend components.
-  - 🤖 An automatically generated frontend client.
-  - 🧪 [Playwright](https://playwright.dev) for End-to-End testing.
-  - 🦇 Dark mode support.
-- 🐋 [Docker Compose](https://www.docker.com) for development and production.
-- 🔒 Secure password hashing by default.
-- 🔑 JWT (JSON Web Token) authentication.
-- 📫 Email based password recovery.
-- 📬 [Mailcatcher](https://mailcatcher.me) for local email testing during development.
-- ✅ Tests with [Pytest](https://pytest.org).
-- 📞 [Traefik](https://traefik.io) as a reverse proxy / load balancer.
-- 🚢 Deployment instructions using Docker Compose, including how to set up a frontend Traefik proxy to handle automatic HTTPS certificates.
-- 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
+Ứng dụng `Medical Chatbot` là dự án web quản lý dữ liệu thuốc - bệnh - tương tác, gồm:
 
-### Dashboard Login
+* Backend Python với FastAPI.
+* Lưu trữ người dùng và dữ liệu quan hệ bằng PostgreSQL.
+* Cơ sở dữ liệu đồ thị Neo4j để lưu bệnh, thuốc, triệu chứng, nhà sản xuất và quan hệ giữa chúng.
+* Frontend React + Vite cho giao diện người dùng.
+* Docker Compose để chạy toàn bộ stack nhanh và nhất quán.
 
-[![API docs](img/login.png)](https://github.com/fastapi/full-stack-fastapi-template)
+## Giới thiệu dự án
 
-### Dashboard - Admin
+Dự án này xây dựng một hệ thống backend + frontend cho:
 
-[![API docs](img/dashboard.png)](https://github.com/fastapi/full-stack-fastapi-template)
+* Tìm kiếm thuốc và bệnh.
+* Xây dựng đồ thị Neo4j cho các quan hệ: thuốc điều trị bệnh, bệnh có triệu chứng, thuốc chứa thành phần, thuốc do nhà sản xuất nào sản xuất, thuốc tương tác với thuốc khác.
+* Xác thực người dùng và quản lý quyền.
+* Chạy thử nhanh bằng Docker Compose.
 
-### Dashboard - Items
+## Yêu cầu
 
-[![API docs](img/dashboard-items.png)](https://github.com/fastapi/full-stack-fastapi-template)
+* Docker và Docker Compose
+* Git để clone code
 
-### Dashboard - Dark Mode
+## Cấu hình môi trường (`.env`)
 
-[![API docs](img/dashboard-dark.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Interactive API Documentation
-
-[![API docs](img/docs.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-## How To Use It
-
-You can **just fork or clone** this repository and use it as is.
-
-✨ It just works. ✨
-
-### How to Use a Private Repository
-
-If you want to have a private repository, GitHub won't allow you to simply fork it as it doesn't allow changing the visibility of forks.
-
-But you can do the following:
-
-- Create a new GitHub repo, for example `my-full-stack`.
-- Clone this repository manually, set the name with the name of the project you want to use, for example `my-full-stack`:
+File `.env` nằm ở thư mục gốc dự án và chứa cấu hình cho cả Backend, PostgreSQL và Neo4j. Mặc định bạn có thể sử dụng file `.env.example` để làm mẫu.
 
 ```bash
-git clone git@github.com:fastapi/full-stack-fastapi-template.git my-full-stack
+cp .env.example .env
+
 ```
 
-- Enter into the new directory:
+**Các biến quan trọng cần kiểm tra:**
+
+* `DOMAIN`: Tên miền môi trường. Mặc định `localhost`.
+* `FRONTEND_HOST`: URL frontend. Mặc định `http://localhost:5173`.
+* `ENVIRONMENT`: Môi trường chạy, thường là `local`.
+
+**Backend:**
+
+* `SECRET_KEY`: Khóa bí mật cho JWT và bảo mật (Nên thay đổi).
+* `FIRST_SUPERUSER`: Email tài khoản quản trị mặc định.
+* `FIRST_SUPERUSER_PASSWORD`: Mật khẩu tài khoản quản trị mặc định.
+
+**PostgreSQL:**
+
+* `POSTGRES_SERVER`: Tên service DB, mặc định `db`.
+* `POSTGRES_DB`: Tên database, mặc định `app`.
+* `POSTGRES_USER`: Tên user DB, mặc định `postgres`.
+* `POSTGRES_PASSWORD`: Mật khẩu DB.
+
+**Neo4j:**
+
+* `NEO4J_URI`: URI kết nối Neo4j, mặc định `bolt://neo4j:7687`.
+* `NEO4J_USERNAME`: User Neo4j, mặc định `neo4j`.
+* `NEO4J_PASSWORD`: Mật khẩu Neo4j.
+
+> **Quan trọng:** Thay `SECRET_KEY`, `FIRST_SUPERUSER_PASSWORD`, `POSTGRES_PASSWORD`, `NEO4J_PASSWORD` bằng giá trị an toàn trước khi chạy trên môi trường thực tế.
+
+## Khởi động dự án
+
+1. Clone repository về máy và di chuyển vào thư mục dự án:
 
 ```bash
-cd my-full-stack
+git clone <url-cua-repo> medical-chatbot
+cd medical-chatbot
+
 ```
 
-- Set the new origin to your new repository, copy it from the GitHub interface, for example:
+2. Đảm bảo bạn đã cấu hình xong file `.env`. Sau đó chạy lệnh sau để khởi tạo stack:
 
 ```bash
-git remote set-url origin git@github.com:octocat/my-full-stack.git
+docker compose build
+docker compose up -d
+
 ```
 
-- Add this repo as another "remote" to allow you to get updates later:
+> **Lưu ý:** Bạn không cần chạy trực tiếp các lệnh Python thủ công để khởi tạo ban đầu. Phần `prestart` trong `backend/scripts/prestart.sh` sẽ tự động chờ DB khởi động, chạy migration (`alembic upgrade head`) và tạo user mặc định.
+
+## Nạp dữ liệu đồ thị Neo4j từ CSV
+
+Trong dự án có sẵn script nạp dữ liệu Neo4j từ CSV tại `backend/app/scripts/seed_from_csv.py`. Sau khi stack đã khởi động thành công ở bước trên, hãy chạy lệnh sau để tạo các node và quan hệ (từ các file CSV trong `backend/app/data/`):
 
 ```bash
-git remote add upstream git@github.com:fastapi/full-stack-fastapi-template.git
+docker compose exec backend python app/scripts/seed_from_csv.py
+
 ```
 
-- Push the code to your new repository:
+## Chạy lại từ đầu (Reset toàn bộ dữ liệu)
+
+Nếu bạn muốn xóa sạch cơ sở dữ liệu hiện tại và khởi tạo lại dự án từ đầu, hãy chạy chuỗi lệnh sau:
 
 ```bash
-git push -u origin master
+# 1. Dừng và xóa toàn bộ stack cùng volumes dữ liệu cũ
+docker compose down -v --remove-orphans
+
+# 2. Xây dựng lại và khởi động lại
+docker compose build
+docker compose up -d
+
+# 3. Nạp lại dữ liệu đồ thị
+docker compose exec backend python app/scripts/seed_from_csv.py
+
 ```
 
-### Update From the Original Template
+## Chạy lệnh thủ công bên trong Backend
 
-After cloning the repository, and after doing changes, you might want to get the latest changes from this original template.
-
-- Make sure you added the original repository as a remote, you can check it with:
+Nếu bạn cần debug hoặc chạy lệnh thủ công, hãy truy cập vào bên trong container backend:
 
 ```bash
-git remote -v
+docker compose exec backend bash
 
-origin    git@github.com:octocat/my-full-stack.git (fetch)
-origin    git@github.com:octocat/my-full-stack.git (push)
-upstream    git@github.com:fastapi/full-stack-fastapi-template.git (fetch)
-upstream    git@github.com:fastapi/full-stack-fastapi-template.git (push)
 ```
 
-- Pull the latest changes without merging:
+Một số lệnh hữu ích có thể chạy bên trong:
 
 ```bash
-git pull --no-commit upstream master
+python -m alembic current
+python app/initial_data.py
+
 ```
 
-This will download the latest changes from this template without committing them, that way you can check everything is right before committing.
+## Truy cập dịch vụ
 
-- If there are conflicts, solve them in your editor.
+Sau khi dự án chạy thành công, bạn có thể truy cập các dịch vụ qua các địa chỉ sau:
 
-- Once you are done, commit the changes:
+* **Frontend:** `http://localhost:3000`
+* **Backend API (Docs):** `http://localhost:8000/docs`
+* **Kiểm tra sức khỏe Backend:** `http://localhost:8000/health`
+* **Neo4j Browser:** `http://localhost:7474`
+* **Adminer (Postgres UI):** `http://localhost:8080`
 
+## Cấu hình IDE (Gợi ý code & Sửa lỗi gạch đỏ)
+
+Mặc dù dự án đã chạy hoàn hảo trong Docker, nhưng nếu bạn dùng **VS Code** để code ở máy thật, IDE sẽ báo lỗi gạch đỏ (ví dụ: `Cannot find module`) do thiếu file thư viện nội bộ. 
+
+Để khắc phục và bật tính năng gợi ý code (IntelliSense) mượt mà nhất, bạn hãy cài đặt thư viện ảo cho cả Backend và Frontend:
+
+### 1. Dành cho Backend (Python)
+Chạy lệnh sau tại thư mục gốc của dự án để tạo môi trường ảo:
 ```bash
-git merge --continue
+python3 -m venv .venv
+source .venv/bin/activate    # Hoặc .venv\Scripts\activate trên Windows
+pip install -r requirements.txt
 ```
+> **Tip:** Sau khi cài xong, trong VS Code nhấn `Ctrl + Shift + P` -> Gõ **Python: Select Interpreter** -> Chọn `./.venv/bin/python`. Các lỗi đỏ ở file Python sẽ biến mất!
 
-### Configure
-
-You can then update configs in the `.env` files to customize your configurations.
-
-Before deploying it, make sure you change at least the values for:
-
-- `SECRET_KEY`
-- `FIRST_SUPERUSER_PASSWORD`
-- `POSTGRES_PASSWORD`
-
-You can (and should) pass these as environment variables from secrets.
-
-Read the [deployment.md](./deployment.md) docs for more details.
-
-### Generate Secret Keys
-
-Some environment variables in the `.env` file have a default value of `changethis`.
-
-You have to change them with a secret key, to generate secret keys you can run the following command:
-
+### 2. Dành cho Frontend (React/Vite)
+Chạy lệnh sau để tải thư viện Node.js cục bộ giúp VS Code nhận diện được React, Tailwind và các component:
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
+cd frontend
+bun install   # Hoặc npm install nếu bạn không dùng bun
 ```
 
-Copy the content and use that as password / secret key. And run that again to generate another secure key.
+## Tài liệu liên quan
 
-## How To Use It - Alternative With Copier
-
-This repository also supports generating a new project using [Copier](https://copier.readthedocs.io).
-
-It will copy all the files, ask you configuration questions, and update the `.env` files with your answers.
-
-### Install Copier
-
-You can install Copier with:
-
-```bash
-pip install copier
-```
-
-Or better, if you have [`pipx`](https://pipx.pypa.io/), you can run it with:
-
-```bash
-pipx install copier
-```
-
-**Note**: If you have `pipx`, installing copier is optional, you could run it directly.
-
-### Generate a Project With Copier
-
-Decide a name for your new project's directory, you will use it below. For example, `my-awesome-project`.
-
-Go to the directory that will be the parent of your project, and run the command with your project's name:
-
-```bash
-copier copy https://github.com/fastapi/full-stack-fastapi-template my-awesome-project --trust
-```
-
-If you have `pipx` and you didn't install `copier`, you can run it directly:
-
-```bash
-pipx run copier copy https://github.com/fastapi/full-stack-fastapi-template my-awesome-project --trust
-```
-
-**Note** the `--trust` option is necessary to be able to execute a [post-creation script](https://github.com/fastapi/full-stack-fastapi-template/blob/master/.copier/update_dotenv.py) that updates your `.env` files.
-
-### Input Variables
-
-Copier will ask you for some data, you might want to have at hand before generating the project.
-
-But don't worry, you can just update any of that in the `.env` files afterwards.
-
-The input variables, with their default values (some auto generated) are:
-
-- `project_name`: (default: `"FastAPI Project"`) The name of the project, shown to API users (in .env).
-- `stack_name`: (default: `"fastapi-project"`) The name of the stack used for Docker Compose labels and project name (no spaces, no periods) (in .env).
-- `secret_key`: (default: `"changethis"`) The secret key for the project, used for security, stored in .env, you can generate one with the method above.
-- `first_superuser`: (default: `"admin@example.com"`) The email of the first superuser (in .env).
-- `first_superuser_password`: (default: `"changethis"`) The password of the first superuser (in .env).
-- `smtp_host`: (default: "") The SMTP server host to send emails, you can set it later in .env.
-- `smtp_user`: (default: "") The SMTP server user to send emails, you can set it later in .env.
-- `smtp_password`: (default: "") The SMTP server password to send emails, you can set it later in .env.
-- `emails_from_email`: (default: `"info@example.com"`) The email account to send emails from, you can set it later in .env.
-- `postgres_password`: (default: `"changethis"`) The password for the PostgreSQL database, stored in .env, you can generate one with the method above.
-- `sentry_dsn`: (default: "") The DSN for Sentry, if you are using it, you can set it later in .env.
-
-## Backend Development
-
-Backend docs: [backend/README.md](./backend/README.md).
-
-## Frontend Development
-
-Frontend docs: [frontend/README.md](./frontend/README.md).
-
-## Deployment
-
-Deployment docs: [deployment.md](./deployment.md).
-
-## Development
-
-General development docs: [development.md](./development.md).
-
-This includes using Docker Compose, custom local domains, `.env` configurations, etc.
-
-## Release Notes
-
-Check the file [release-notes.md](./release-notes.md).
+* Backend: [backend/README.md](https://www.google.com/search?q=./backend/README.md)
+* Frontend: [frontend/README.md](https://www.google.com/search?q=./frontend/README.md)
+* Docker Compose: [compose.yml](https://www.google.com/search?q=./compose.yml)
 
 ## License
 
-The Full Stack FastAPI Template is licensed under the terms of the MIT license.
+Dự án này sử dụng giấy phép MIT.

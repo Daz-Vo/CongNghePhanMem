@@ -60,13 +60,13 @@ const AdminDiseases = () => {
   const closeModal = () => setModal(null);
 
   const handleDelete = async (name) => {
-    if (window.confirm(`Bạn có chắc muốn xóa bệnh ${name}?`)) {
+    if (window.confirm(`Are you sure you want to delete disease ${name}?`)) {
       try {
         await AdminService.deleteDiseaseApiV1AdminDiseasesIdDelete({ id: name });
         setDiseases(prev => prev.filter(d => d.name !== name));
       } catch (err) {
         console.error('Failed to delete disease', err);
-        alert('Lỗi xóa bệnh');
+        alert('Failed to delete disease');
       }
     }
   };
@@ -96,7 +96,7 @@ const AdminDiseases = () => {
       closeModal();
     } catch (err) {
       console.error('Failed to update disease', err);
-      alert('Lỗi cập nhật bệnh');
+      alert('Failed to update disease');
     }
   };
 
@@ -116,7 +116,7 @@ const AdminDiseases = () => {
       closeModal();
     } catch (err) {
       console.error('Failed to add disease', err);
-      alert('Lỗi thêm bệnh');
+      alert('Failed to add disease');
     }
   };
 
@@ -209,13 +209,13 @@ const AdminDiseases = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openView(d)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="Xem chi tiết">
+                            <button onClick={() => openView(d)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="View details">
                               <iconify-icon icon="lucide:eye"></iconify-icon>
                             </button>
-                            <button onClick={() => openEdit(d)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="Chỉnh sửa">
+                            <button onClick={() => openEdit(d)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="Edit">
                               <iconify-icon icon="lucide:pencil"></iconify-icon>
                             </button>
-                            <button onClick={() => handleDelete(d.name)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-destructive transition-colors" title="Xóa">
+                            <button onClick={() => handleDelete(d.name)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-destructive transition-colors" title="Delete">
                               <iconify-icon icon="lucide:trash-2"></iconify-icon>
                             </button>
                           </div>

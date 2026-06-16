@@ -18,17 +18,17 @@ const Navbar = () => {
           <a href="#about" className="hover:text-foreground transition-colors">About Us</a>
         </nav>
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => navigate('/login')}
             className="text-sm font-medium text-foreground hover:text-primary transition-colors"
           >
             Log In
           </button>
-          <button 
+          <button
             onClick={() => navigate('/register')}
             className="bg-primary text-primary-foreground px-5 py-2.5 rounded-full text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
           >
-            Sign Up Free
+            Sign Up
           </button>
         </div>
       </div>

@@ -5,8 +5,8 @@ import { useUser } from '../context/UserContext';
 const WELCOME_MSG = {
   id: 'welcome',
   role: 'ai',
-  text: "Xin chào! Tôi là trợ lý y tế AI. Tôi có thể giúp bạn tìm hiểu về triệu chứng, thuốc, hoặc kiểm tra tương tác thuốc.",
-  suggestions: ['Tác dụng phụ của Ibuprofen', 'Tăng huyết áp là gì?', 'Kiểm tra tương tác thuốc'],
+  text: "Hello! I'm your medical AI assistant. I can help you learn about symptoms, medications, or check drug interactions.",
+  suggestions: ['Ibuprofen side effects', 'What is hypertension?', 'Check drug interactions'],
 };
 
 const AiChat = () => {
@@ -90,7 +90,7 @@ const AiChat = () => {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         role: 'ai',
-        text: "Xin lỗi, tôi gặp lỗi kết nối đến máy chủ. Vui lòng thử lại.",
+        text: "Sorry, I'm having trouble connecting to the server. Please try again.",
       }]);
     } finally {
       setSending(false);
@@ -113,9 +113,9 @@ const AiChat = () => {
   return (
     <div className="flex flex-row h-[calc(100vh-4rem)]">
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col relative bg-background min-w-0">
+      <div className="flex-1 flex flex-col bg-background min-w-0">
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col gap-6 pb-36">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col gap-6">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex gap-4 max-w-3xl mx-auto w-full ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               {msg.role === 'ai' ? (
@@ -134,11 +134,13 @@ const AiChat = () => {
                 </p>
 
                 {msg.typing ? (
-                  <div className="flex items-center gap-2 px-5 py-3 bg-secondary rounded-2xl rounded-tl-sm w-fit">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <div className="flex items-center gap-4 px-6 py-4 bg-secondary/60 rounded-2xl rounded-tl-sm w-fit animate-pulse border border-border/50 shadow-sm">
+                    <iconify-icon icon="lucide:sparkles" class="text-primary text-xl animate-spin-slow"></iconify-icon>
+                    <span className="text-sm font-medium text-muted-foreground">MediAI is thinking...</span>
+                    <div className="flex gap-1.5 ml-2">
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                     </div>
                   </div>
                 ) : msg.role === 'user' ? (
@@ -192,7 +194,7 @@ const AiChat = () => {
         </div>
 
         {/* Input area */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-6 px-4 md:px-8">
+        <div className="shrink-0 bg-background border-t border-border/50 pt-4 pb-6 px-4 md:px-8">
           <div className="max-w-3xl mx-auto w-full relative">
             <div className="bg-card border border-border rounded-3xl p-2 shadow-lg flex items-end gap-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
               <textarea
@@ -201,7 +203,7 @@ const AiChat = () => {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
                 disabled={sending}
-                placeholder="Hỏi về triệu chứng, thuốc, hoặc tương tác thuốc..."
+                placeholder="Ask about symptoms, medications, or drug interactions..."
                 className="w-full max-h-32 bg-transparent border-none focus:ring-0 resize-none py-3 px-2 text-sm text-foreground placeholder:text-muted-foreground outline-none disabled:opacity-50"
                 style={{ minHeight: '44px' }}
               />
@@ -214,7 +216,7 @@ const AiChat = () => {
               </button>
             </div>
             <div className="text-center mt-3">
-              <p className="text-[10px] text-muted-foreground">MediAI có thể mắc lỗi. Luôn xác minh thông tin y tế quan trọng với chuyên gia y tế.</p>
+              <p className="text-[10px] text-muted-foreground">MediAI may make mistakes. Always verify important medical information with a healthcare professional.</p>
             </div>
           </div>
         </div>

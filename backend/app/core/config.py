@@ -1,6 +1,7 @@
 import warnings
 from typing import Annotated, Any, Literal
 
+from pathlib import Path
 from pydantic import (
     AnyUrl,
     BeforeValidator,

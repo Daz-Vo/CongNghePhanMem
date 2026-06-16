@@ -42,7 +42,7 @@ const Login = () => {
         }
       }
     } catch (err) {
-      setError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
+      setError('Email or password is incorrect. Please try again.');
     } finally {
       setLoading(false);
     }
