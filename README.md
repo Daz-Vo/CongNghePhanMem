@@ -96,7 +96,7 @@ Nếu bạn muốn xóa sạch cơ sở dữ liệu hiện tại và khởi tạ
 
 ```bash
 # 1. Dừng và xóa toàn bộ stack cùng volumes dữ liệu cũ
-docker compose down -v --remove-orphans
+docker compose down --volumes --rmi all
 
 # 2. Xây dựng lại và khởi động lại
 docker compose build

@@ -5,52 +5,57 @@ from app.services.neo4j_service import neo4j_service
 
 logger = logging.getLogger(__name__)
 
+try:
+    from sentence_transformers import SentenceTransformer, util
+    import torch
+    MODEL_AVAILABLE = True
+except ImportError:
+    MODEL_AVAILABLE = False
+
 class NERService:
     """
     Named Entity Recognition Service for Medical Chatbot.
-    Identifies Drugs and Diseases from user queries using fuzzy matching.
+    Identifies Drugs and Diseases from user queries using Semantic Vector Search.
     """
     
     def __init__(self):
-        self.drug_names: Set[str] = set()
-        self.disease_names: Set[str] = set()
+        self.drug_names = []
+        self.disease_names = []
+        self.drug_embeddings = None
+        self.disease_embeddings = None
+        
+        if MODEL_AVAILABLE:
+            logger.info("Loading sentence-transformers model (all-MiniLM-L6-v2)...")
+            self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        else:
+            logger.warning("sentence-transformers not available. Falling back to exact match.")
+            self.model = None
+            
         self._last_refresh = 0
         self._refresh_interval = 3600  # 1 hour
 
-    def _levenshtein_distance(self, s1: str, s2: str) -> int:
-        if len(s1) < len(s2):
-            return self._levenshtein_distance(s2, s1)
-        if not s2:
-            return len(s1)
-        
-        previous_row = range(len(s2) + 1)
-        for i, c1 in enumerate(s1):
-            current_row = [i + 1]
-            for j, c2 in enumerate(s2):
-                insertions = previous_row[j + 1] + 1
-                deletions = current_row[j] + 1
-                substitutions = previous_row[j] + (c1 != c2)
-                current_row.append(min(insertions, deletions, substitutions))
-            previous_row = current_row
-        return previous_row[-1]
-
     def _normalize_text(self, text: str) -> str:
-        # Lowercase and remove punctuation
         text = text.lower()
         text = re.sub(r'[^\w\s]', '', text)
         return text.strip()
 
     def refresh_entities(self):
-        """Fetch drug and disease names from Neo4j."""
+        """Fetch drug and disease names from Neo4j and compute embeddings."""
         try:
             logger.info("Refreshing NER entity cache from Neo4j...")
-            # This is a bit heavy, but good for fuzzy matching. 
-            # In a real large-scale app, we'd use a search engine like ElasticSearch.
             drugs = neo4j_service.search_drugs("", limit=1000)
             diseases = neo4j_service.search_diseases("", limit=1000)
             
-            self.drug_names = {d["name"] for d in drugs}
-            self.disease_names = {d["name"] for d in diseases}
+            self.drug_names = [d["name"] for d in drugs]
+            self.disease_names = [d["name"] for d in diseases]
+            
+            if self.model:
+                logger.info("Computing Semantic Embeddings for entities...")
+                if self.drug_names:
+                    self.drug_embeddings = self.model.encode(self.drug_names, convert_to_tensor=True)
+                if self.disease_names:
+                    self.disease_embeddings = self.model.encode(self.disease_names, convert_to_tensor=True)
+                    
             logger.info(f"NER cache refreshed: {len(self.drug_names)} drugs, {len(self.disease_names)} diseases.")
         except Exception as e:
             logger.error(f"Failed to refresh NER cache: {e}")
@@ -58,38 +63,58 @@ class NERService:
     def extract_entities(self, text: str) -> dict:
         """
         Extract drugs and diseases from text.
-        Supports Vietnamese and English via fuzzy matching.
+        Priority 1: Quoted strings (e.g. "headache")
+        Priority 2: Semantic Vector Similarity (Cosine Similarity > 0.8)
         """
         if not self.drug_names:
             self.refresh_entities()
 
-        normalized_query = self._normalize_text(text)
-        words = normalized_query.split()
-        
         extracted_drugs = set()
         extracted_diseases = set()
 
-        # Simple window-based matching
-        # Check for 1, 2, or 3-word entities
-        for n in range(1, 4):
-            for i in range(len(words) - n + 1):
-                phrase = " ".join(words[i:i+n])
-                
-                # Check Drugs
-                for drug in self.drug_names:
-                    norm_drug = self._normalize_text(drug)
-                    dist = self._levenshtein_distance(phrase, norm_drug)
-                    # Allow 1 typo for short words, 2 for longer ones
-                    threshold = 1 if len(norm_drug) < 6 else 2
-                    if dist <= threshold:
-                        extracted_drugs.add(drug)
+        # 1. Quoted Entities Extraction (Highest Priority)
+        quoted_phrases = re.findall(r'["\'](.*?)["\']', text)
+        if quoted_phrases:
+            logger.info(f"Found quoted entities: {quoted_phrases}")
+            words_to_check = quoted_phrases
+        else:
+            # Sliding window of 1-3 words
+            normalized_query = self._normalize_text(text)
+            words = normalized_query.split()
+            words_to_check = []
+            for n in range(1, 4):
+                for i in range(len(words) - n + 1):
+                    words_to_check.append(" ".join(words[i:i+n]))
 
-                # Check Diseases
+        if not words_to_check:
+            return {"drugs": [], "diseases": []}
+
+        if self.model and self.drug_embeddings is not None and self.disease_embeddings is not None:
+            # Semantic Search
+            phrase_embeddings = self.model.encode(words_to_check, convert_to_tensor=True)
+            
+            if self.drug_names:
+                cos_scores_drugs = util.cos_sim(phrase_embeddings, self.drug_embeddings)
+                for i in range(len(words_to_check)):
+                    best_score, best_idx = torch.max(cos_scores_drugs[i], dim=0)
+                    if best_score.item() > 0.78:  # 0.78 similarity threshold
+                        extracted_drugs.add(self.drug_names[best_idx])
+                        
+            if self.disease_names:
+                cos_scores_diseases = util.cos_sim(phrase_embeddings, self.disease_embeddings)
+                for i in range(len(words_to_check)):
+                    best_score, best_idx = torch.max(cos_scores_diseases[i], dim=0)
+                    if best_score.item() > 0.78:
+                        extracted_diseases.add(self.disease_names[best_idx])
+        else:
+            # Fallback to Exact/Fuzzy Matching
+            for phrase in words_to_check:
+                norm_phrase = self._normalize_text(phrase)
+                for drug in self.drug_names:
+                    if norm_phrase == self._normalize_text(drug):
+                        extracted_drugs.add(drug)
                 for disease in self.disease_names:
-                    norm_disease = self._normalize_text(disease)
-                    dist = self._levenshtein_distance(phrase, norm_disease)
-                    threshold = 1 if len(norm_disease) < 6 else 2
-                    if dist <= threshold:
+                    if norm_phrase == self._normalize_text(disease):
                         extracted_diseases.add(disease)
 
         return {

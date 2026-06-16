@@ -86,8 +86,26 @@ class ChatService:
             # Convert language name to code for Wikipedia
             lang_code = "vi" if language.lower() in ["vietnamese", "vi"] else "en"
             
+            search_terms = []
+            if lang_code != "en":
+                from deep_translator import GoogleTranslator
+                try:
+                    translator = GoogleTranslator(source='en', target=lang_code)
+                    for term in all_terms:
+                        # Only translate diseases. Translating drug names (like Advil) can cause hallucinations
+                        if term in diseases:
+                            search_terms.append(translator.translate(term))
+                        else:
+                            search_terms.append(term)
+                    logger.info(f"Translated terms for Wikipedia search: {search_terms}")
+                except Exception as e:
+                    logger.error(f"Failed to translate terms for Wikipedia: {e}")
+                    search_terms = all_terms
+            else:
+                search_terms = all_terms
+
             # Fetch Wikipedia summaries for all terms
-            wiki_data = await wikipedia_service.extract_medical_context(all_terms, language=lang_code)
+            wiki_data = await wikipedia_service.extract_medical_context(search_terms, language=lang_code)
             
             sources = []
             context_entries = []
