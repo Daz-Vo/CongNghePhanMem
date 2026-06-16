@@ -22,6 +22,9 @@ def get_user_search_history(db: Session, user_id: int, limit: int = 20, skip: in
         .limit(limit)\
         .all()
 
+def get_user_search_history_count(db: Session, user_id: int) -> int:
+    return db.query(SearchHistory).filter(SearchHistory.user_id == user_id).count()
+
 def delete_user_search_history(db: Session, user_id: int) -> int:
     result = db.query(SearchHistory).filter(SearchHistory.user_id == user_id).delete()
     db.commit()
@@ -34,3 +37,13 @@ def delete_search_history_entry(db: Session, user_id: int, entry_id: int) -> boo
     ).delete()
     db.commit()
     return result > 0
+
+def get_top_searches(db: Session, item_type: str = "medicine", limit: int = 5):
+    from sqlalchemy import func
+    results = db.query(SearchHistory.query_text, func.count(SearchHistory.id).label("count"))\
+        .filter(SearchHistory.item_type == item_type)\
+        .group_by(SearchHistory.query_text)\
+        .order_by(func.count(SearchHistory.id).desc())\
+        .limit(limit)\
+        .all()
+    return [{"name": r[0], "count": r[1]} for r in results]

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 
@@ -20,6 +20,8 @@ class ChatHistoryItem(BaseModel):
     response: str
     intent: Optional[str] = None
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChatHistoryList(BaseModel):

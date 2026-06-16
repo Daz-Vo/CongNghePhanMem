@@ -22,5 +22,6 @@ class UserUpdate(BaseModel):
 class UserRead(UserBase):
     id: int
     created_at: Optional[datetime] = None
+    is_superuser: bool = False
 
     model_config = {"from_attributes": True}

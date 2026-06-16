@@ -32,7 +32,8 @@ def get_chat_history(
     Retrieve the current user's chat history.
     """
     history = chat_service.get_user_history(db, current_user.id, limit=limit)
-    return ChatHistoryList(total=len(history), items=history)
+    total = chat_service.get_chat_logs_count(db, user_id=current_user.id)
+    return {"total": total, "items": history}
 
 @router.get("/history/{id}", response_model=ChatHistoryItem)
 def get_chat_detail(

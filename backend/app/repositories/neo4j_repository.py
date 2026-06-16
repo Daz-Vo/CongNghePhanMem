@@ -7,6 +7,16 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+def clean_neo4j_types(data: Any) -> Any:
+    """Recursively convert Neo4j specific types (like DateTime) to standard Python types."""
+    if hasattr(data, 'isoformat') and callable(getattr(data, 'isoformat')):
+        return data.isoformat()
+    elif isinstance(data, dict):
+        return {k: clean_neo4j_types(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [clean_neo4j_types(i) for i in data]
+    return data
+
 
 class Neo4jRepository:
     """Handles low-level Neo4j driver operations."""
@@ -57,7 +67,7 @@ class Neo4jRepository:
             
             def _read_tx(tx):
                 result = tx.run(cypher_query, **params)
-                return [record.data() for record in result]
+                return [clean_neo4j_types(record.data()) for record in result]
 
             with self._driver.session(database=settings.NEO4J_DATABASE) as session:
                 records = session.execute_read(_read_tx)
@@ -79,7 +89,7 @@ class Neo4jRepository:
             
             def _write_tx(tx):
                 result = tx.run(cypher_query, **params)
-                return [record.data() for record in result]
+                return [clean_neo4j_types(record.data()) for record in result]
 
             with self._driver.session(database=settings.NEO4J_DATABASE) as session:
                 records = session.execute_write(_write_tx)
