@@ -46,6 +46,19 @@ cp .env.example .env
 * `FIRST_SUPERUSER`: Email tài khoản quản trị mặc định.
 * `FIRST_SUPERUSER_PASSWORD`: Mật khẩu tài khoản quản trị mặc định.
 
+**Emails (SMTP / Gửi link quên mật khẩu):**
+
+Để hệ thống gửi được email thật chứa link đặt lại mật khẩu cho người dùng khi họ nhấn quên mật khẩu trên giao diện Frontend:
+* `SMTP_HOST`: Địa chỉ máy chủ SMTP (Ví dụ Gmail: `smtp.gmail.com`).
+* `SMTP_PORT`: Cổng máy chủ SMTP (Ví dụ Gmail: `587`).
+* `SMTP_TLS`: Kích hoạt TLS (Ví dụ Gmail: `True`).
+* `SMTP_SSL`: Kích hoạt SSL (Ví dụ Gmail: `False`).
+* `SMTP_USER`: Tài khoản email gửi (Ví dụ Gmail: `email-cua-ban@gmail.com`).
+* `SMTP_PASSWORD`: Mật khẩu hoặc Mật khẩu ứng dụng (App Password 16 ký tự của Google) dùng để đăng nhập gửi mail.
+* `EMAILS_FROM_EMAIL`: Địa chỉ email hiển thị ở người gửi (Trùng với `SMTP_USER`).
+
+*Lưu ý: Backend của ứng dụng đã được cấu hình tự động tìm và đọc file `.env` ở thư mục gốc của dự án này.*
+
 **PostgreSQL:**
 
 * `POSTGRES_SERVER`: Tên service DB, mặc định `db`.
