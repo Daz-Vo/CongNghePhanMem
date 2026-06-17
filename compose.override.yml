@@ -44,10 +44,11 @@ services:
     volumes:
       - ./backend/htmlcov:/app/backend/htmlcov
     environment:
-      SMTP_HOST: "mailcatcher"
-      SMTP_PORT: "1025"
-      SMTP_TLS: "false"
-      EMAILS_FROM_EMAIL: "noreply@example.com"
+      SMTP_HOST: "smtp.gmail.com"
+      SMTP_PORT: "587"
+      SMTP_TLS: "true"
+      SMTP_SSL: "false"
+      EMAILS_FROM_EMAIL: "phuocho0909@gmail.com"
 
   mailcatcher:
     image: schickling/mailcatcher
