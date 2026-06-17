@@ -5,7 +5,6 @@ services:
   # Backend: http://localhost:8000
   # Adminer: http://localhost:8080
   # PostgreSQL: localhost:5432
-  # MailCatcher: http://localhost:1080 (preview), port 1025 (SMTP)
 
   db:
     restart: "no"
@@ -44,16 +43,12 @@ services:
     volumes:
       - ./backend/htmlcov:/app/backend/htmlcov
     environment:
-      SMTP_HOST: "mailcatcher"
-      SMTP_PORT: "1025"
-      SMTP_TLS: "false"
-      EMAILS_FROM_EMAIL: "noreply@example.com"
+      SMTP_HOST: "smtp.gmail.com"
+      SMTP_PORT: "587"
+      SMTP_TLS: "true"
+      SMTP_SSL: "false"
+      EMAILS_FROM_EMAIL: "phuocho0909@gmail.com"
 
-  mailcatcher:
-    image: schickling/mailcatcher
-    ports:
-      - "1080:1080"
-      - "1025:1025"
 
   frontend:
     restart: "no"
@@ -76,12 +71,10 @@ services:
     ipc: host
     depends_on:
       - backend
-      - mailcatcher
     env_file:
       - .env
     environment:
       - VITE_API_URL=http://backend:8000
-      - MAILCATCHER_HOST=http://mailcatcher:1080
       # For the reports when run locally
       - PLAYWRIGHT_HTML_HOST=0.0.0.0
       - CI=${CI}
