@@ -204,7 +204,7 @@ const AdminAILogs = () => {
                 {[
                   { label: 'Symptom Checker', checked: true, desc: 'Analyze user symptoms' },
                   { label: 'Medication Interaction Check', checked: true, desc: 'Check Neo4j for drug interactions' },
-                  { label: 'Web Search Fallback', checked: false, desc: 'Search web if DB fails' },
+                  { label: 'Gemini API Integration', checked: true, desc: 'Use AI models for natural responses' },
                 ].map((item) => (
                   <label key={item.label} className="flex items-start justify-between cursor-pointer group">
                     <div>
