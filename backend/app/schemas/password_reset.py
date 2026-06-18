@@ -1,5 +1,5 @@
 """
-Password reset API schemas.
+API Schemas cho đặt lại mật khẩu.
 """
 
 from pydantic import BaseModel, EmailStr, Field
@@ -7,19 +7,19 @@ from typing import Optional
 
 
 class ForgotPasswordRequest(BaseModel):
-    """Forgot password request payload."""
+    """Dữ liệu yêu cầu quên mật khẩu."""
 
     email: EmailStr
 
 
 class ResetPasswordRequest(BaseModel):
-    """Reset password request payload."""
+    """Dữ liệu yêu cầu đặt lại mật khẩu."""
 
     token: str = Field(..., min_length=1)
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
 class PasswordResetResponse(BaseModel):
-    """Standard password reset response."""
+    """Phản hồi tiêu chuẩn cho việc đặt lại mật khẩu."""
 
     message: str

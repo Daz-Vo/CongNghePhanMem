@@ -8,36 +8,36 @@ logger = logging.getLogger(__name__)
 
 class WikipediaService:
     """
-    Service to fetch medical information from Wikipedia.
-    Supports both English and Vietnamese Wikipedia.
-    No API key required - completely free!
+    Dịch vụ lấy thông tin y tế từ Wikipedia.
+    Hỗ trợ cả Wikipedia tiếng Anh và tiếng Việt.
+    Không yêu cầu API key - hoàn toàn miễn phí!
     """
 
-    # Wikipedia endpoints
+    # Các endpoint của Wikipedia
     EN_WIKI_API = "https://en.wikipedia.org/w/api.php"
     VI_WIKI_API = "https://vi.wikipedia.org/w/api.php"
     
-    # Timeout for requests
+    # Thời gian chờ (timeout) cho các yêu cầu
     TIMEOUT = 10
 
     @staticmethod
     def _get_wiki_api_url(language: str = "en") -> str:
-        """Get Wikipedia API endpoint based on language."""
+        """Lấy Wikipedia API endpoint dựa trên ngôn ngữ."""
         if language.lower() in ["vi", "vietnamese"]:
             return WikipediaService.VI_WIKI_API
         return WikipediaService.EN_WIKI_API
 
     async def search(self, query: str, language: str = "en", limit: int = 5) -> List[Dict[str, Any]]:
         """
-        Search Wikipedia for articles matching the query.
+        Tìm kiếm các bài viết trên Wikipedia khớp với truy vấn.
         
-        Args:
-            query: Search term (e.g., "aspirin", "drug interaction")
-            language: "en" or "vi" for English or Vietnamese
-            limit: Max results to return
+        Tham số:
+            query: Thuật ngữ tìm kiếm (ví dụ: "aspirin", "drug interaction")
+            language: "en" hoặc "vi" cho tiếng Anh hoặc tiếng Việt
+            limit: Số lượng kết quả tối đa trả về
             
-        Returns:
-            List of search results with title and snippet
+        Trả về:
+            Danh sách kết quả tìm kiếm với tiêu đề và đoạn trích dẫn (snippet)
         """
         try:
             wiki_url = self._get_wiki_api_url(language)
@@ -82,15 +82,15 @@ class WikipediaService:
         chars: int = 500
     ) -> Optional[str]:
         """
-        Get the introduction/summary of a Wikipedia article.
+        Lấy phần giới thiệu/tóm tắt của một bài viết trên Wikipedia.
         
-        Args:
-            article_title: Wikipedia article title
-            language: "en" or "vi"
-            chars: Max characters to return (default 500)
+        Tham số:
+            article_title: Tiêu đề bài viết Wikipedia
+            language: "en" hoặc "vi"
+            chars: Số lượng ký tự tối đa trả về (mặc định 500)
             
-        Returns:
-            Article summary or None if not found
+        Trả về:
+            Tóm tắt bài viết hoặc None nếu không tìm thấy
         """
         try:
             wiki_url = self._get_wiki_api_url(language)
@@ -101,7 +101,7 @@ class WikipediaService:
                 "titles": article_title,
                 "prop": "extracts",
                 "explaintext": "true",
-                "exintro": "true",  # Get only intro section
+                "exintro": "true",  # Chỉ lấy phần giới thiệu (intro)
                 "exchars": chars
             }
             
@@ -120,9 +120,9 @@ class WikipediaService:
                 data = response.json()
                 pages = data.get("query", {}).get("pages", {})
                 
-                # Get first (and usually only) page
+                # Lấy trang đầu tiên (và thường là duy nhất)
                 for page_id, page_data in pages.items():
-                    if page_id != "-1":  # -1 means page not found
+                    if page_id != "-1":  # -1 nghĩa là không tìm thấy trang
                         extract = page_data.get("extract", "").strip()
                         if extract:
                             logger.info(f"[Wikipedia] Got extract for '{article_title}' ({len(extract)} chars)")
@@ -141,14 +141,14 @@ class WikipediaService:
         language: str = "en"
     ) -> Optional[str]:
         """
-        Get the full content of a Wikipedia article.
+        Lấy nội dung đầy đủ của một bài viết trên Wikipedia.
         
-        Args:
-            article_title: Wikipedia article title
-            language: "en" or "vi"
+        Tham số:
+            article_title: Tiêu đề bài viết Wikipedia
+            language: "en" hoặc "vi"
             
-        Returns:
-            Full article content or None if not found
+        Trả về:
+            Nội dung đầy đủ bài viết hoặc None nếu không tìm thấy
         """
         try:
             wiki_url = self._get_wiki_api_url(language)
@@ -180,7 +180,7 @@ class WikipediaService:
                     if page_id != "-1":
                         extract = page_data.get("extract", "").strip()
                         if extract:
-                            # Limit to first 3000 chars to avoid overwhelming context
+                            # Giới hạn ở 3000 ký tự đầu tiên để tránh quá tải ngữ cảnh (context)
                             return extract[:3000]
                 
                 return None
@@ -195,17 +195,17 @@ class WikipediaService:
         language: str = "en"
     ) -> Optional[str]:
         """
-        Search for a term and return summary of the best matching article.
+        Tìm kiếm một thuật ngữ và trả về tóm tắt của bài viết khớp nhất.
         
-        Args:
-            query: Search term
-            language: "en" or "vi"
+        Tham số:
+            query: Thuật ngữ tìm kiếm
+            language: "en" hoặc "vi"
             
-        Returns:
-            Article summary or None
+        Trả về:
+            Tóm tắt bài viết hoặc None
         """
         try:
-            # First search
+            # Tìm kiếm trước
             results = await self.search(query, language, limit=1)
             
             article_title = None
@@ -218,11 +218,11 @@ class WikipediaService:
             if not article_title:
                 return None
             
-            # Fetch article summary
+            # Lấy tóm tắt bài viết
             summary = await self.get_article_summary(article_title, language)
             
             if summary:
-                # Add article link for reference
+                # Thêm liên kết bài viết để tham khảo
                 wiki_lang = "vi" if language.lower() in ["vi", "vietnamese"] else "en"
                 article_url = f"https://{wiki_lang}.wikipedia.org/wiki/{quote(article_title)}"
                 return f"{summary}\n\n[Source: Wikipedia - {article_title}]({article_url})"
@@ -240,15 +240,15 @@ class WikipediaService:
         max_results: int = 3
     ) -> Dict[str, Optional[str]]:
         """
-        Extract medical information for multiple terms (drugs, diseases, symptoms).
+        Trích xuất thông tin y tế cho nhiều thuật ngữ (thuốc, bệnh lý, triệu chứng).
         
-        Args:
-            terms: List of medical terms to look up
-            language: "en" or "vi"
-            max_results: Max articles to fetch per term
+        Tham số:
+            terms: Danh sách các thuật ngữ y tế cần tra cứu
+            language: "en" hoặc "vi"
+            max_results: Số lượng bài viết tối đa để lấy cho mỗi thuật ngữ
             
-        Returns:
-            Dictionary mapping term -> summary
+        Trả về:
+            Từ điển ánh xạ thuật ngữ -> tóm tắt
         """
         results = {}
         
@@ -263,5 +263,5 @@ class WikipediaService:
         return results
 
 
-# Global instance
+# Thực thể toàn cục (global instance)
 wikipedia_service = WikipediaService()

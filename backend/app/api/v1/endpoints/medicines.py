@@ -16,14 +16,14 @@ def search_medicines(
     limit: int = Query(10, ge=1, le=100),
     skip: int = Query(0, ge=0),
 ):
-    """Search for medicines."""
+    """Tìm kiếm dược phẩm/thuốc."""
     return medicine_lookup_service.search_medicines(query=q, limit=limit, skip=skip)
 
 @router.get("/{name}/detail", response_model=MedicineDetailResponse)
 def get_medicine_detail(
     name: str = Path(..., description="Medicine name"),
 ):
-    """Get detailed information about a specific medicine."""
+    """Lấy thông tin chi tiết về một dược phẩm/thuốc cụ thể."""
     medicine = medicine_lookup_service.get_medicine_detail(name)
     if not medicine:
         raise HTTPException(
@@ -32,10 +32,10 @@ def get_medicine_detail(
         )
     return medicine
 
-# Alias for spec compliance: GET /medicines/{id}
+# Bí danh (alias) tuân thủ đặc tả: GET /medicines/{id}
 @router.get("/{id}", response_model=MedicineDetailResponse)
 def get_medicine_by_id(
     id: str = Path(..., description="Medicine ID (using name as ID)"),
 ):
-    """Compatibility alias: Get medicine by name (used as ID)."""
+    """Bí danh tương thích: Lấy thuốc theo tên (được sử dụng làm ID)."""
     return get_medicine_detail(id)

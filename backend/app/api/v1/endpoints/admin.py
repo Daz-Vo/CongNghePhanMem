@@ -18,7 +18,7 @@ def admin_rebuild_graph(
     current_user: Annotated[User, Depends(get_current_user)]
 ):
     """
-    Admin only: Rebuild Neo4j constraints and indexes.
+    Chỉ dành cho Admin: Tái thiết lập các ràng buộc (constraints) và chỉ mục (indexes) trong Neo4j.
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Only superusers can perform this action")
@@ -33,7 +33,7 @@ def admin_reset_graph(
     test_only: bool = Query(True, description="If true, only clean test/dummy data")
 ):
     """
-    Admin only: Reset or cleanup the Neo4j graph.
+    Chỉ dành cho Admin: Khởi động lại (reset) hoặc dọn dẹp đồ thị Neo4j.
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Only superusers can perform this action")
@@ -48,7 +48,7 @@ def admin_graph_stats(
     current_user: Annotated[User, Depends(get_current_user)]
 ):
     """
-    Admin only: Get Neo4j graph statistics.
+    Chỉ dành cho Admin: Lấy số liệu thống kê đồ thị Neo4j.
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Only superusers can perform this action")
@@ -128,7 +128,7 @@ def admin_get_ai_logs(
     limit: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1)
 ):
-    """Admin: Retrieve AI interaction logs from ChatHistory."""
+    """Admin: Lấy nhật ký tương tác AI từ lịch sử chat (ChatHistory)."""
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -190,7 +190,7 @@ async def admin_test_ai_config(
         except Exception as e:
             return {"success": False, "message": str(e)}
 
-# Admin Medicine CRUD
+# Admin Medicine CRUD (Các thao tác CRUD Thuốc của Admin)
 @router.post("/medicines", response_model=MedicineDetailResponse, status_code=201)
 def admin_create_medicine(
     medicine_in: MedicineCreate,
@@ -228,7 +228,7 @@ def admin_delete_medicine(
         raise HTTPException(status_code=404, detail="Medicine not found")
     return {"success": True}
 
-# Admin Disease CRUD
+# Admin Disease CRUD (Các thao tác CRUD Bệnh của Admin)
 @router.post("/diseases", response_model=DiseaseDetailResponse, status_code=201)
 def admin_create_disease(
     disease_in: DiseaseCreate,

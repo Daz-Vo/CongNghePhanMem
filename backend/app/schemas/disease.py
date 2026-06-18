@@ -1,5 +1,5 @@
 """
-Disease API schemas.
+API Schemas cho bệnh lý.
 """
 
 from pydantic import BaseModel, Field
@@ -7,21 +7,21 @@ from typing import Optional, List
 
 
 class DiseaseSearchRequest(BaseModel):
-    """Disease search request."""
+    """Yêu cầu tìm kiếm bệnh lý."""
 
     query: str = Field(..., min_length=1, max_length=255)
     limit: int = Field(10, ge=1, le=100)
 
 
 class DiseaseSymptom(BaseModel):
-    """Disease symptom model."""
+    """Mô hình triệu chứng bệnh lý."""
 
     name: str
     description: Optional[str] = None
 
 
 class DiseaseResponse(BaseModel):
-    """Disease basic response."""
+    """Phản hồi cơ bản của bệnh lý."""
 
     id: Optional[str] = None
     name: str
@@ -31,7 +31,7 @@ class DiseaseResponse(BaseModel):
 
 
 class DiseaseDetailResponse(DiseaseResponse):
-    """Disease detail response with symptoms."""
+    """Phản hồi chi tiết của bệnh lý kèm theo các triệu chứng."""
 
     category: Optional[str] = None
     severity: Optional[str] = None
@@ -40,14 +40,14 @@ class DiseaseDetailResponse(DiseaseResponse):
 
 
 class DiseaseSearchResponse(BaseModel):
-    """Disease search response."""
+    """Phản hồi tìm kiếm bệnh lý."""
 
     total: int
     limit: int
     items: List[DiseaseResponse]
 
 class DiseaseTreatmentResponse(BaseModel):
-    """Response for medicines that treat a specific disease."""
+    """Phản hồi về các thuốc điều trị một bệnh cụ thể."""
     disease_name: str
     treatments: List[dict] = Field(default_factory=list, description="Medicine list with basic details")
     total: int

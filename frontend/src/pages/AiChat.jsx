@@ -10,24 +10,25 @@ const WELCOME_MSG = {
 };
 
 const AiChat = () => {
-  const { user } = useUser();
-  const [messages, setMessages] = useState([WELCOME_MSG]);
-  const [chatHistory, setChatHistory] = useState([]);
-  const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  const bottomRef = useRef(null);
+  const { user } = useUser(); // user: Thông tin người dùng hiện tại lấy từ Context
+  const [messages, setMessages] = useState([WELCOME_MSG]); // messages: Danh sách các tin nhắn hiển thị trong màn hình chat (bao gồm tin nhắn của user và ai)
+  const [chatHistory, setChatHistory] = useState([]); // chatHistory: Danh sách lịch sử các cuộc hội thoại lấy từ API
+  const [input, setInput] = useState(''); // input: Dữ liệu nhập vào của ô chat từ người dùng
+  const [sending, setSending] = useState(false); // sending: Trạng thái đang gửi tin nhắn lên server để khóa input/nút bấm
+  const [loadingHistory, setLoadingHistory] = useState(true); // loadingHistory: Trạng thái đang tải lịch sử chat từ backend
+  const bottomRef = useRef(null); // bottomRef: Tham chiếu tới phần tử cuối danh sách tin nhắn để tự động cuộn xuống khi có tin nhắn mới
 
-  // Load chat history from API
+  // Effect: Tự động tải lịch sử chat từ API backend khi Component được mount
   useEffect(() => {
     const fetchHistory = async () => {
       try {
+        // data: Lấy dữ liệu 20 cuộc hội thoại gần nhất của người dùng từ API
         const data = await ChatService.getChatHistoryApiV1ChatHistoryGet({ limit: 20 });
         setChatHistory(data?.items || []);
 
-        // If there is prior history, restore the last session as messages
+        // Khôi phục phiên chat trước đó nếu có lịch sử trò chuyện
         if (data?.items?.length > 0) {
-          const restored = [];
+          const restored = []; // restored: Mảng lưu trữ tin nhắn được phục dựng từ lịch sử
           data.items.slice().reverse().forEach(item => {
             restored.push({ id: `u-${item.id}`, role: 'user', text: item.message });
             restored.push({
@@ -48,30 +49,33 @@ const AiChat = () => {
     fetchHistory();
   }, []);
 
+  // Effect: Tự động cuộn xuống cuối màn hình chat mỗi khi danh sách tin nhắn thay đổi
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // sendMessage: Hàm xử lý gửi tin nhắn lên API và nhận phản hồi RAG
   const sendMessage = async (text) => {
-    const msgText = text || input;
+    const msgText = text || input; // msgText: Văn bản tin nhắn thực tế cần gửi (ưu tiên tham số truyền vào hoặc dùng input state)
     if (!msgText.trim() || sending) return;
 
-    const userMsg = { id: Date.now(), role: 'user', text: msgText };
+    const userMsg = { id: Date.now(), role: 'user', text: msgText }; // userMsg: Đối tượng tin nhắn của người dùng để cập nhật lên UI
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setSending(true);
 
-    // Add typing indicator
-    const typingId = Date.now() + 0.5;
+    // Hiển thị trạng thái AI đang gõ chữ (typing indicator)
+    const typingId = Date.now() + 0.5; // typingId: ID tạm thời cho tin nhắn đang chờ phản hồi
     setMessages(prev => [...prev, { id: typingId, role: 'ai', typing: true }]);
 
     try {
+      // response: Kết quả trả về từ API chatbot y khoa bao gồm câu trả lời, nguồn và các cảnh báo
       const response = await ChatService.askQuestionApiV1ChatAskPost({
         requestBody: {
           message: msgText
         }
       });
-      setMessages(prev => prev.filter(m => m.id !== typingId));
+      setMessages(prev => prev.filter(m => m.id !== typingId)); // Xóa biểu tượng đang gõ sau khi nhận phản hồi
       const aiReply = {
         id: Date.now() + 1,
         role: 'ai',
@@ -79,14 +83,15 @@ const AiChat = () => {
         sources: response.sources || [],
         warnings: response.warnings || [],
         entities: response.entities || [],
-      };
+      }; // aiReply: Đối tượng phản hồi hoàn chỉnh của AI trợ lý
       setMessages(prev => [...prev, aiReply]);
-      // Refresh history list
+      
+      // Làm mới danh sách lịch sử chat ở sidebar
       ChatService.getChatHistoryApiV1ChatHistoryGet({ limit: 20 })
         .then(d => setChatHistory(d?.items || []))
         .catch(() => {});
     } catch (err) {
-      setMessages(prev => prev.filter(m => m.id !== typingId));
+      setMessages(prev => prev.filter(m => m.id !== typingId)); // Xóa biểu tượng đang gõ khi xảy ra lỗi
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         role: 'ai',
@@ -97,6 +102,7 @@ const AiChat = () => {
     }
   };
 
+  // handleKey: Hàm xử lý sự kiện bấm phím trong ô nhập liệu (bấm Enter để gửi, Shift+Enter để xuống dòng)
   const handleKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -104,6 +110,7 @@ const AiChat = () => {
     }
   };
 
+  // initials: Chữ cái viết tắt tên người dùng hiển thị làm Avatar
   const initials = user?.full_name
     ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';

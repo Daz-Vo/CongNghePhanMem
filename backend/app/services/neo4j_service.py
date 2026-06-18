@@ -1,8 +1,8 @@
 """
-Neo4j Database Service.
+Dịch vụ cơ sở dữ liệu Neo4j.
 
-Handles all Neo4j operations with proper session management,
-error handling, and logging.
+Xử lý tất cả các thao tác Neo4j với quản lý session chính xác,
+xử lý lỗi và ghi log.
 """
 
 import logging
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Neo4jService:
-    """Neo4j database service with singleton pattern."""
+    """Dịch vụ cơ sở dữ liệu Neo4j với mẫu singleton."""
 
     _instance: Optional["Neo4jService"] = None
 
@@ -30,12 +30,12 @@ class Neo4jService:
         return self._repository.verify_connectivity()
 
     # ============================================
-    # DRUG OPERATIONS
+    # THAO TÁC TRÊN THUỐC (DRUGS)
     # ============================================
 
     def merge_drug(self, drug_data: dict[str, Any]) -> bool:
         try:
-            # Fallback for name: brand_name -> generic_name -> "Unknown"
+            # Cơ chế dự phòng cho tên: brand_name -> generic_name -> "Unknown"
             name = drug_data.get("name") or drug_data.get("brand_name") or drug_data.get("generic_name") or "Unknown"
             
             query = """
@@ -248,7 +248,7 @@ class Neo4jService:
             return None
 
     # ============================================
-    # DISEASE OPERATIONS
+    # THAO TÁC TRÊN BỆNH LÝ (DISEASES)
     # ============================================
 
     def search_diseases(self, query_text: str, limit: int = 10) -> list[dict[str, Any]]:
@@ -316,8 +316,8 @@ class Neo4jService:
 
     def get_subgraph_context(self, drug_names: list[str], disease_names: list[str]) -> list[dict[str, Any]]:
         """
-        Optimized 'Graph-First' lookup.
-        Fetches all relevant nodes and relationships for multiple entities in one visit.
+        Tìm kiếm tối ưu hóa 'Graph-First'.
+        Lấy tất cả các nút và mối quan hệ liên quan cho nhiều thực thể trong một lần truy vấn duy nhất.
         """
         if not drug_names and not disease_names:
             return []
@@ -379,12 +379,12 @@ class Neo4jService:
             return []
 
     # ============================================
-    # INTERACTION OPERATIONS
+    # THAO TÁC TRÊN TƯƠNG TÁC (INTERACTION)
     # ============================================
 
     def check_drug_interactions(self, drug_names: list[str]) -> list[dict[str, Any]]:
         """
-        Check interactions between multiple drugs using a single efficient Cypher query.
+        Kiểm tra tương tác giữa nhiều loại thuốc bằng cách sử dụng một truy vấn Cypher hiệu quả duy nhất.
         """
         if not drug_names or len(drug_names) < 2:
             return []
@@ -409,11 +409,7 @@ class Neo4jService:
             return []
 
     # ============================================
-    # RELATIONSHIP OPERATIONS
-    # ============================================
-
-    # ============================================
-    # RELATIONSHIP OPERATIONS
+    # THAO TÁC TRÊN MỐI QUAN HỆ (RELATIONSHIP)
     # ============================================
 
     def merge_contains_relationship(
@@ -528,11 +524,11 @@ class Neo4jService:
             return False
 
     # ============================================
-    # MAINTENANCE & STATS
+    # BẢO TRÌ & THỐNG KÊ
     # ============================================
 
     def rebuild_graph(self) -> bool:
-        """Create constraints and indexes in Neo4j."""
+        """Tạo các ràng buộc (constraints) và chỉ mục (indexes) trong Neo4j."""
         try:
             queries = [
                 "CREATE CONSTRAINT drug_name IF NOT EXISTS FOR (d:Drug) REQUIRE d.name IS UNIQUE",
@@ -552,7 +548,7 @@ class Neo4jService:
             return False
 
     def cleanup_test_data(self) -> dict[str, int]:
-        """Remove test/dummy nodes and relationships."""
+        """Xóa các nút và mối quan hệ thử nghiệm/nháp."""
         try:
             query = """
             MATCH (n)
@@ -572,7 +568,7 @@ class Neo4jService:
             return {"error": str(e)}
 
     def reset_graph(self, confirm: bool = False) -> dict[str, Any]:
-        """Delete ALL nodes and relationships if confirmed."""
+        """Xóa TẤT CẢ các nút và mối quan hệ nếu được xác nhận."""
         if not confirm:
             return {"error": "Confirmation required to reset graph"}
         try:
@@ -586,21 +582,21 @@ class Neo4jService:
             return {"error": str(e)}
 
     def get_graph_stats(self) -> dict[str, Any]:
-        """Get counts of labels, relationships, and isolated nodes."""
+        """Lấy số lượng nhãn, mối quan hệ và các nút cô lập."""
         try:
-            # Count labels
+            # Đếm các nhãn
             try:
                 label_results = self._repository.execute_read("MATCH (n) RETURN labels(n)[0] AS label, count(*) AS count")
                 labels = {r["label"] or "Unknown": r["count"] for r in label_results}
             except Exception:
                 labels = {}
 
-            # Count relationships
+            # Đếm các mối quan hệ
             rel_query = "MATCH ()-[r]->() RETURN type(r) AS type, count(*) AS count"
             rel_results = self._repository.execute_read(rel_query)
             relationships = {r["type"]: r["count"] for r in rel_results}
 
-            # Count isolated nodes
+            # Đếm các nút cô lập
             isolated_query = "MATCH (n) WHERE NOT (n)--() RETURN count(n) AS count"
             isolated_results = self._repository.execute_read(isolated_query)
             isolated_count = isolated_results[0]["count"] if isolated_results else 0
@@ -615,7 +611,7 @@ class Neo4jService:
             return {"error": str(e)}
 
     def get_graph_data(self, limit: int = 100) -> dict[str, list[dict[str, Any]]]:
-        """Fetch nodes and relationships for visualization."""
+        """Lấy các nút và mối quan hệ để phục vụ hiển thị trực quan (visualization)."""
         try:
             query = """
             MATCH (n)
@@ -630,7 +626,7 @@ class Neo4jService:
             links = []
             
             for record in results:
-                # Process source node
+                # Xử lý nút nguồn
                 n = record.get("n")
                 if n:
                     node_id = str(n.element_id) if hasattr(n, "element_id") else str(id(n))
@@ -641,7 +637,7 @@ class Neo4jService:
                             "properties": dict(n)
                         }
                 
-                # Process relationship and target node
+                # Xử lý mối quan hệ và nút đích
                 r = record.get("r")
                 m = record.get("m")
                 if r and m:

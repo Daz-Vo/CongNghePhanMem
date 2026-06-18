@@ -1,6 +1,6 @@
 """
-Disease lookup endpoints.
-Handles disease searches and retrievals.
+Các endpoint tra cứu bệnh lý.
+Xử lý các tìm kiếm và truy xuất thông tin bệnh lý.
 """
 
 from fastapi import APIRouter, HTTPException, Query, Path, status
@@ -15,20 +15,19 @@ router = APIRouter(prefix="/diseases", tags=["diseases"])
 
 @router.get("/search", response_model=DiseaseSearchResponse)
 def search_diseases(
-    q: str = Query(..., min_length=0, max_length=255, description="Search query"),
-    limit: int = Query(10, ge=1, le=100, description="Max results"),
-    skip: int = Query(0, ge=0, description="Number of results to skip"),
+    q: str = Query(..., min_length=0, max_length=255, description="Search query"), # q: Từ khóa tìm kiếm bệnh lý do người dùng nhập vào
+    limit: int = Query(10, ge=1, le=100, description="Max results"), # limit: Giới hạn số lượng kết quả tối đa trả về trên mỗi trang
+    skip: int = Query(0, ge=0, description="Number of results to skip"), # skip: Số lượng kết quả cần bỏ qua (sử dụng trong việc phân trang)
 ):
     """
-    Search for diseases by name or description.
-    
-    - **q**: Search query (required)
-    - **limit**: Maximum number of results (default: 10, max: 100)
-    - **skip**: Number of results to skip (default: 0)
+    Mục đích: Tìm kiếm các bệnh lý theo tên hoặc mô tả.
+    Cơ chế hoạt động: Nhận từ khóa tìm kiếm và các thông số phân trang, gọi tầng service `disease_lookup_service.search_diseases` để thực hiện truy vấn trong Neo4j và trả về kết quả định dạng chuẩn.
     """
     logger.info(f"GET /api/v1/diseases/search?q={q}&limit={limit}&skip={skip}")
     try:
-        return disease_lookup_service.search_diseases(query=q, limit=limit, skip=skip)
+        # result: Kết quả tìm kiếm bệnh lý được lấy từ cơ sở dữ liệu đồ thị Neo4j thông qua service
+        result = disease_lookup_service.search_diseases(query=q, limit=limit, skip=skip)
+        return result
     except Exception as exc:
         logger.exception(f"Error searching diseases: {exc}")
         raise HTTPException(
@@ -39,17 +38,15 @@ def search_diseases(
 
 @router.get("/{disease_name}/detail", response_model=DiseaseDetailResponse)
 def get_disease_detail(
-    disease_name: str = Path(..., description="Disease name"),
+    disease_name: str = Path(..., description="Disease name"), # disease_name: Tên của bệnh lý cần lấy thông tin chi tiết
 ):
     """
-    Get detailed information about a specific disease.
-    
-    Includes:
-    - Basic disease information (name, description, ICD code)
-    - Symptoms and characteristics
+    Mục đích: Lấy thông tin chi tiết về một bệnh lý cụ thể bao gồm mô tả, mức độ và các triệu chứng liên quan.
+    Cơ chế hoạt động: Nhận tên bệnh lý từ đường dẫn URL, gọi `disease_lookup_service.get_disease_detail` để tìm kiếm nút bệnh lý và các nút triệu chứng liên kết trong đồ thị Neo4j.
     """
     logger.info(f"GET /api/v1/diseases/{disease_name}/detail")
     try:
+        # disease: Đối tượng chứa thông tin chi tiết của bệnh lý truy vấn được từ cơ sở dữ liệu
         disease = disease_lookup_service.get_disease_detail(disease_name)
         if not disease:
             raise HTTPException(
@@ -69,19 +66,17 @@ def get_disease_detail(
 
 @router.get("/{disease_name}/treatments", response_model=DiseaseTreatmentResponse)
 def get_disease_treatments(
-    disease_name: str = Path(..., description="Disease name"),
-    limit: int = Query(10, ge=1, le=100, description="Max results"),
-    skip: int = Query(0, ge=0, description="Number of results to skip"),
+    disease_name: str = Path(..., description="Disease name"), # disease_name: Tên bệnh lý cần tìm thuốc điều trị
+    limit: int = Query(10, ge=1, le=100, description="Max results"), # limit: Giới hạn số lượng thuốc tối đa trả về
+    skip: int = Query(0, ge=0, description="Number of results to skip"), # skip: Số lượng thuốc bỏ qua để phân trang kết quả
 ):
     """
-    Get medicines that treat a specific disease.
-    
-    - **disease_name**: Name of the disease (required)
-    - **limit**: Maximum number of medicines to return (default: 10, max: 100)
-    - **skip**: Number of medicines to skip (default: 0)
+    Mục đích: Lấy danh sách các loại thuốc dùng để điều trị một bệnh lý cụ thể.
+    Cơ chế hoạt động: Tìm kiếm các mối quan hệ TREATS (điều trị) từ nút Bệnh lý đến nút Thuốc trong cơ sở dữ liệu đồ thị Neo4j và trả về danh sách thuốc tương ứng.
     """
     logger.info(f"GET /api/v1/diseases/{disease_name}/treatments?limit={limit}&skip={skip}")
     try:
+        # medicines: Danh sách các thuốc có quan hệ điều trị đối với bệnh lý được chỉ định
         medicines = disease_lookup_service.get_treating_medicines(disease_name, limit=limit, skip=skip)
         if not medicines:
             raise HTTPException(

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MedicinesService, BookmarksService } from '../client';
+import { useUser } from '../context/UserContext';
 
 const MedicineDetail = () => {
   const navigate = useNavigate();
+  const { user } = useUser();
   const { id } = useParams();
   const [medicine, setMedicine] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,6 +14,7 @@ const MedicineDetail = () => {
 
   useEffect(() => {
     const checkBookmark = async () => {
+      if (!user) return;
       try {
         const bookmarks = await BookmarksService.getBookmarksApiV1BookmarksGet({ limit: 100, skip: 0 });
         if (bookmarks.items.some(b => b.item_type === 'medicine' && b.item_neo4j_id === id)) {
@@ -37,6 +40,10 @@ const MedicineDetail = () => {
   }, [id]);
 
   const handleToggleSave = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     setIsSaving(true);
     try {
       if (isSaved) {
@@ -72,7 +79,7 @@ const MedicineDetail = () => {
       {/* Breadcrumbs & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <nav className="flex text-sm text-muted-foreground font-medium items-center gap-1">
-          <button onClick={() => navigate('/app/medicines')} className="hover:text-foreground transition-colors">Medicines</button>
+          <button onClick={() => navigate(user ? '/app/medicines' : '/medicines')} className="hover:text-foreground transition-colors">Medicines</button>
           <span className="mx-1">/</span>
           <span className="text-foreground">{medicine.name}</span>
         </nav>
@@ -85,7 +92,7 @@ const MedicineDetail = () => {
             <iconify-icon icon={isSaved ? "lucide:bookmark-check" : "lucide:bookmark"} class="mr-2"></iconify-icon>
             {isSaved ? 'Saved' : 'Save'}
           </button>
-          <button onClick={() => navigate('/app/chat')} className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-sm font-medium transition-colors flex items-center shadow-sm">
+          <button onClick={() => navigate(user ? '/app/chat' : '/chat')} className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-sm font-medium transition-colors flex items-center shadow-sm">
             <iconify-icon icon="lucide:sparkles" class="mr-2"></iconify-icon>
             Ask AI about this
           </button>
@@ -187,7 +194,7 @@ const MedicineDetail = () => {
                 </div>
               ))}
             </div>
-            <button onClick={() => navigate('/app/interactions')} className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-full text-sm font-medium transition-colors">
+            <button onClick={() => navigate(user ? '/app/interactions' : '/login')} className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-full text-sm font-medium transition-colors">
               Check all interactions
             </button>
           </div>

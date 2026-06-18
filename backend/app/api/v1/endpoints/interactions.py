@@ -1,6 +1,6 @@
 """
-Drug interaction endpoints.
-Handles drug interaction checks.
+Các endpoint tương tác thuốc.
+Xử lý việc kiểm tra tương tác giữa các loại thuốc.
 """
 
 from fastapi import APIRouter, HTTPException, Query, Path, status, Depends
@@ -29,7 +29,7 @@ def get_interaction_history_count(
     db: Annotated[Session, Depends(get_db)]
 ):
     """
-    Get the total number of interaction checks performed by the user.
+    Lấy tổng số lượt kiểm tra tương tác thuốc mà người dùng đã thực hiện.
     """
     count = interaction_history_repository.get_user_interaction_count(db, current_user.id)
     return {"total": count}
@@ -41,11 +41,11 @@ def get_drug_interactions(
     skip: int = Query(0, ge=0, description="Number of results to skip"),
 ):
     """
-    Get all known interactions for a specific medicine.
+    Lấy tất cả các tương tác đã biết của một loại thuốc cụ thể.
     
-    - **drug_name**: Name of the medicine to check (required)
+    - **drug_name**: Tên thuốc cần kiểm tra (bắt buộc)
     
-    Returns list of medicines that interact with the specified medicine.
+    Trả về danh sách các loại thuốc tương tác với thuốc được chỉ định.
     """
     logger.info(f"GET /api/v1/interactions/{drug_name}?limit={limit}&skip={skip}")
     try:
@@ -75,9 +75,9 @@ def check_multiple_interactions(
     request: InteractionCheckRequest,
 ):
     """
-    Check interactions between multiple medicines.
+    Kiểm tra tương tác giữa nhiều loại thuốc.
     
-    Returns all interaction pairs found with severity levels.
+    Trả về tất cả các cặp tương tác thuốc được tìm thấy kèm theo mức độ nghiêm trọng.
     """
     logger.info(f"POST /api/v1/interactions/check with medicines: {request.drug_names}")
     try:
@@ -96,9 +96,9 @@ def assess_interaction(
     drug_2: str = Path(..., description="Second medicine name"),
 ):
     """
-    Assess the interaction between two specific medicines.
+    Đánh giá mức độ tương tác giữa hai loại thuốc cụ thể.
     
-    Returns detailed interaction information if it exists.
+    Trả về thông tin chi tiết về tương tác nếu có.
     """
     logger.info(f"GET /api/v1/interactions/{drug_1}/with/{drug_2}")
     try:
@@ -134,7 +134,7 @@ def analyze_drug_combination(
     db: Annotated[Session, Depends(get_db)]
 ):
     """
-    Analyze a combination of medicines to identify safe and unsafe combinations.
+    Phân tích một tổ hợp các thuốc để xác định các tổ hợp an toàn và không an toàn.
     """
     logger.info(f"POST /api/v1/interactions/analyze-combination with medicines: {request.drug_names}")
     try:

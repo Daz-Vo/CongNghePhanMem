@@ -1,6 +1,6 @@
 """
-Drug interaction service.
-Handles drug interaction checks and retrievals.
+Dịch vụ kiểm tra tương tác thuốc.
+Xử lý việc kiểm tra và truy xuất tương tác giữa các loại thuốc.
 """
 
 import logging
@@ -13,15 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 class DrugInteractionService:
-    """Service for checking drug interactions."""
+    """Dịch vụ kiểm tra tương tác thuốc."""
 
     def __init__(self):
         self._repository = drug_repository
 
     def get_drug_interactions(self, drug_name: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
-        Get all drugs that interact with a specific drug.
-        Returns list of interactions with severity and description.
+        Lấy tất cả các loại thuốc có tương tác với một thuốc cụ thể.
+        Trả về danh sách các tương tác kèm theo mức độ nghiêm trọng và mô tả.
         """
         logger.info(f"Fetching interactions for drug: '{drug_name}', limit: {limit}, skip: {skip}")
 
@@ -40,8 +40,8 @@ class DrugInteractionService:
         self, drug_names: list[str]
     ) -> InteractionCheckResponse:
         """
-        Check interactions between multiple drugs.
-        Returns InteractionCheckResponse with all interaction pairs found.
+        Kiểm tra tương tác giữa nhiều loại thuốc với nhau.
+        Trả về InteractionCheckResponse chứa tất cả các cặp tương tác tìm thấy.
         """
         logger.info(f"Checking interactions for drugs: {drug_names}")
 
@@ -76,13 +76,13 @@ class DrugInteractionService:
         self, drug_1: str, drug_2: str
     ) -> dict[str, Any] | None:
         """
-        Assess the severity of interaction between two specific drugs.
-        Returns interaction details or None if no interaction.
+        Đánh giá mức độ nghiêm trọng của tương tác giữa hai loại thuốc cụ thể.
+        Trả về thông tin chi tiết về tương tác hoặc None nếu không có tương tác.
         """
         logger.info(f"Assessing interaction between '{drug_1}' and '{drug_2}'")
 
         try:
-            # Get interactions for first drug
+            # Lấy các tương tác của thuốc đầu tiên
             interactions = self._repository.get_drug_interactions(drug_1)
 
             for inter in interactions:
@@ -106,15 +106,15 @@ class DrugInteractionService:
         self, drug_names: list[str]
     ) -> dict[str, Any]:
         """
-        Analyze a list of drugs to identify safe and unsafe combinations.
-        Returns a summary of interactions found.
+        Phân tích danh sách các loại thuốc để xác định tổ hợp an toàn và không an toàn.
+        Trả về tóm tắt các tương tác tìm thấy.
         """
         logger.info(f"Analyzing drug combinations: {drug_names}")
 
         try:
             interactions = self._repository.check_multiple_drug_interactions(drug_names)
 
-            # Group by severity
+            # Gom nhóm theo mức độ nghiêm trọng
             severe = [i for i in interactions if i.get("severity") == "severe"]
             moderate = [i for i in interactions if i.get("severity") == "moderate"]
             mild = [i for i in interactions if i.get("severity") == "mild"]

@@ -1,5 +1,5 @@
 """
-Interaction API schemas.
+API Schemas cho tương tác thuốc.
 """
 
 from pydantic import BaseModel, Field
@@ -7,13 +7,13 @@ from typing import List
 
 
 class InteractionCheckRequest(BaseModel):
-    """Request to check interactions between drugs."""
+    """Yêu cầu kiểm tra các tương tác giữa các loại thuốc."""
 
     drug_names: List[str] = Field(..., min_items=2, max_items=10)
 
 
 class InteractionResult(BaseModel):
-    """Interaction result between two drugs."""
+    """Kết quả tương tác giữa hai loại thuốc."""
 
     drug_1: str
     drug_2: str
@@ -23,12 +23,12 @@ class InteractionResult(BaseModel):
 
 
 class InteractionCheckResponse(BaseModel):
-    """Response for interaction check."""
+    """Phản hồi cho việc kiểm tra tương tác."""
 
     results: List[InteractionResult] = Field(default_factory=list)
 
 class InteractionDetailResponse(BaseModel):
-    """Detailed interaction between two specific drugs."""
+    """Chi tiết tương tác giữa hai loại thuốc cụ thể."""
     drug_1: str
     drug_2: str
     has_interaction: bool
@@ -37,14 +37,14 @@ class InteractionDetailResponse(BaseModel):
     message: str | None = None
 
 class InteractionListResponse(BaseModel):
-    """List of all interactions for a specific drug."""
+    """Danh sách tất cả các tương tác đối với một loại thuốc cụ thể."""
     drug_name: str
     interactions: List[InteractionResult] = Field(default_factory=list)
     total: int
     message: str | None = None
 
 class InteractionSummaryResponse(BaseModel):
-    """Summary of drug combination analysis."""
+    """Tóm tắt kết quả phân tích tổ hợp thuốc."""
     drug_names: List[str]
     interactions: List[InteractionResult]
     is_safe: bool

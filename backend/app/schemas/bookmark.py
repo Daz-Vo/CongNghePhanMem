@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 
 class BookmarkBase(BaseModel):
-    item_type: str  # "Medicine" or "Disease"
+    item_type: str  # "Medicine" (Dược phẩm) hoặc "Disease" (Bệnh lý)
     item_neo4j_id: str
 
 class BookmarkCreate(BookmarkBase):

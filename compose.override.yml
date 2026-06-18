@@ -57,9 +57,21 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      target: build-stage
       args:
         - VITE_API_URL=http://localhost:8000
         - NODE_ENV=development
+    command: bun run dev --host --port 80
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    develop:
+      watch:
+        - path: ./frontend
+          action: sync
+          target: /app/frontend
+          ignore:
+            - ./frontend/node_modules
 
   playwright:
     build:

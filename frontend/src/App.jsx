@@ -86,6 +86,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/chat" element={<AiChat />} />
           <Route path="/medicines" element={<MedicineSearch />} />
+          <Route path="/medicines/:id" element={<MedicineDetail />} />
         </Route>
 
         {/* Auth Routes */}

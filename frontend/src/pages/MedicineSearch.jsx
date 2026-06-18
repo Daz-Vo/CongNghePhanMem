@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MedicinesService, BookmarksService, SearchHistoryService } from '../client';
+import { useUser } from '../context/UserContext';
 
 const colorMap = {
   blue: 'bg-blue-50 text-blue-600',
@@ -12,6 +13,7 @@ const colorMap = {
 
 const MedicineSearch = () => {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [query, setQuery] = useState('');
   const [savedMap, setSavedMap] = useState({});
   const [results, setResults] = useState([]);
@@ -37,6 +39,7 @@ const MedicineSearch = () => {
   };
 
   const fetchBookmarks = async () => {
+    if (!user) return;
     try {
       const data = await BookmarksService.getBookmarksApiV1BookmarksGet({ limit: 100, skip: 0 });
       const map = {};
@@ -53,8 +56,10 @@ const MedicineSearch = () => {
 
   useEffect(() => {
     fetchMedicines();
-    fetchBookmarks();
-  }, []);
+    if (user) {
+      fetchBookmarks();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (query.trim() === '') {
@@ -82,7 +87,7 @@ const MedicineSearch = () => {
     setQuery(searchQuery);
     setShowSuggestions(false);
     fetchMedicines(searchQuery);
-    if (searchQuery.trim() !== '') {
+    if (user && searchQuery.trim() !== '') {
       try {
         await SearchHistoryService.addSearchHistoryApiV1SearchHistoryPost({
           requestBody: { query_text: searchQuery.trim(), item_type: 'medicine' }
@@ -94,6 +99,10 @@ const MedicineSearch = () => {
   };
 
   const toggleSave = async (id) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     try {
       if (savedMap[id]) {
         await BookmarksService.deleteBookmarkApiV1BookmarksIdDelete({ id: savedMap[id] });
@@ -178,7 +187,7 @@ const MedicineSearch = () => {
                 <span className="px-2 py-1 rounded bg-secondary text-[10px] font-medium text-foreground">API Data</span>
               </div>
               <button
-                onClick={() => navigate(`/app/medicines/${encodeURIComponent(med.name)}`)}
+                onClick={() => navigate(user ? `/app/medicines/${encodeURIComponent(med.name)}` : `/medicines/${encodeURIComponent(med.name)}`)}
                 className="w-full py-2.5 border border-border rounded-xl text-sm font-medium text-foreground hover:bg-secondary hover:text-primary transition-colors mt-auto"
               >
                 View Details

@@ -1,6 +1,6 @@
 """
-Drug repository for Neo4j operations.
-Handles drug lookups, searches, and relationships.
+Repository thuốc cho các thao tác Neo4j.
+Xử lý các tra cứu, tìm kiếm và mối quan hệ của thuốc.
 """
 
 import logging
@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class DrugRepository:
-    """Repository for drug-related Neo4j operations."""
+    """Repository cho các thao tác Neo4j liên quan đến thuốc."""
 
     def __init__(self):
         self._repository = neo4j_repository
 
     def get_drug_by_name(self, drug_name: str) -> dict[str, Any] | None:
         """
-        Get a drug by exact name with all related information.
+        Lấy thông tin thuốc theo tên chính xác cùng với tất cả thông tin liên quan.
         """
         query = """
         MATCH (d:Drug)
@@ -41,7 +41,7 @@ class DrugRepository:
             [(d)-[:CONTAINS]->(i:Ingredient) | i.name] AS ingredients,
             [(d)-[:MADE_BY]->(m:Manufacturer) | m.name] AS manufacturers,
             [(d)-[:TREATS]->(dis:Disease) | dis.name] AS treated_diseases,
-            [(d)-[int:INTERACTS_WITH]->(d2:Drug) | {
+            [(d)-[int:INTERACTS_WITH]-(d2:Drug) | {
                 name: d2.name,
                 severity: int.severity,
                 description: int.description
@@ -58,7 +58,7 @@ class DrugRepository:
 
     def search_drugs(self, query_str: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
-        Search for drugs by name, brand name, or generic name.
+        Tìm kiếm thuốc theo tên thương mại, nhãn hiệu hoặc tên chung (generic).
         """
         query = """
         MATCH (d:Drug)
@@ -89,7 +89,7 @@ class DrugRepository:
         self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
-        Get drugs that treat a specific disease.
+        Lấy danh sách các thuốc điều trị một bệnh lý cụ thể.
         """
         query = """
         MATCH (disease:Disease {name: $disease_name})
@@ -115,11 +115,11 @@ class DrugRepository:
 
     def get_drug_interactions(self, drug_name: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
-        Get all drugs that interact with a specific drug.
+        Lấy tất cả các loại thuốc có tương tác với một thuốc cụ thể.
         """
         query = """
         MATCH (drug:Drug {name: $drug_name})
-        MATCH (drug)-[int:INTERACTS_WITH]->(d:Drug)
+        MATCH (drug)-[int:INTERACTS_WITH]-(d:Drug)
         RETURN 
             d.name AS name,
             d.brand_name AS brand_name,
@@ -141,14 +141,14 @@ class DrugRepository:
         self, drug_names: list[str]
     ) -> list[dict[str, Any]]:
         """
-        Check interactions between multiple drugs.
-        Returns all pairs that have interactions.
+        Kiểm tra tương tác giữa nhiều loại thuốc.
+        Trả về tất cả các cặp thuốc có xảy ra tương tác.
         """
         if not drug_names or len(drug_names) < 2:
             return []
 
         query = """
-        MATCH (d:Drug)-[int:INTERACTS_WITH]->(d2:Drug)
+        MATCH (d:Drug)-[int:INTERACTS_WITH]-(d2:Drug)
         WHERE d.name IN $drug_names AND d2.name IN $drug_names
         RETURN 
             d.name AS drug_1,
@@ -165,7 +165,7 @@ class DrugRepository:
 
     def get_drug_ingredients(self, drug_name: str) -> list[dict[str, Any]]:
         """
-        Get all ingredients in a drug.
+        Lấy tất cả các thành phần có trong một loại thuốc.
         """
         query = """
         MATCH (d:Drug {name: $drug_name})
@@ -183,7 +183,7 @@ class DrugRepository:
 
     def get_drug_count(self) -> int:
         """
-        Get total count of drugs in database.
+        Lấy tổng số lượng thuốc trong cơ sở dữ liệu.
         """
         query = "MATCH (d:Drug) RETURN COUNT(d) AS count"
         try:

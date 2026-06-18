@@ -16,7 +16,7 @@ def add_search_history(
     db: Annotated[Session, Depends(get_db)]
 ):
     """
-    Log a search query for the current user.
+    Ghi lại lịch sử tìm kiếm cho người dùng hiện tại.
     """
     return search_history_service.add_search_entry(db, int(current_user.id), request)
 
@@ -28,7 +28,7 @@ def get_search_history(
     skip: int = Query(0, ge=0)
 ):
     """
-    Retrieve search history for the current user.
+    Lấy danh sách lịch sử tìm kiếm của người dùng hiện tại.
     """
     return search_history_service.get_history(db, int(current_user.id), limit=limit, skip=skip)
 
@@ -39,7 +39,7 @@ def delete_search_history(
     db: Annotated[Session, Depends(get_db)]
 ):
     """
-    Delete a specific search history entry.
+    Xóa một mục cụ thể trong lịch sử tìm kiếm.
     """
     success = search_history_service.delete_history_entry(db, int(current_user.id), id)
     if not success:

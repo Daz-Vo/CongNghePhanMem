@@ -1,6 +1,6 @@
 """
-Disease lookup service.
-Handles disease searches and retrievals.
+Dịch vụ tra cứu bệnh.
+Xử lý các tìm kiếm và truy xuất thông tin bệnh lý.
 """
 
 import logging
@@ -13,15 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 class DiseaseLookupService:
-    """Service for disease lookups and searches."""
+    """Dịch vụ tra cứu và tìm kiếm thông tin bệnh lý."""
 
     def __init__(self):
         self._repository = disease_repository
 
     def search_diseases(self, query: str, limit: int = 10, skip: int = 0) -> DiseaseSearchResponse:
         """
-        Search for diseases by name or description.
-        Returns a DiseaseSearchResponse with matching diseases.
+        Tìm kiếm bệnh theo tên hoặc mô tả.
+        Trả về DiseaseSearchResponse chứa danh sách bệnh khớp với truy vấn.
         """
         logger.info(f"Searching diseases with query: '{query}', limit: {limit}, skip: {skip}")
 
@@ -45,8 +45,8 @@ class DiseaseLookupService:
 
     def get_disease_detail(self, disease_name: str) -> DiseaseDetailResponse | None:
         """
-        Get full details of a disease including treating drugs.
-        Returns DiseaseDetailResponse or None if not found.
+        Lấy thông tin chi tiết đầy đủ của một bệnh bao gồm cả các loại thuốc điều trị.
+        Trả về DiseaseDetailResponse hoặc None nếu không tìm thấy.
         """
         logger.info(f"Fetching details for disease: '{disease_name}'")
 
@@ -56,7 +56,7 @@ class DiseaseLookupService:
                 logger.warning(f"Disease '{disease_name}' not found")
                 return None
 
-            # Transform symptoms
+            # Chuyển đổi cấu trúc triệu chứng
             symptoms = [
                 {"name": s.get("name"), "description": s.get("description")}
                 for s in (disease.get("symptoms") or [])
@@ -81,7 +81,7 @@ class DiseaseLookupService:
         self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
-        Get medicines that treat a specific disease.
+        Lấy danh sách các loại thuốc điều trị một bệnh cụ thể.
         """
         logger.info(f"Fetching treating medicines for disease: '{disease_name}', limit: {limit}, skip: {skip}")
 
@@ -98,15 +98,15 @@ class DiseaseLookupService:
 
 
     def delete_disease(self, name: str) -> bool:
-        """Admin: Delete a disease."""
+        """Admin: Xóa một bệnh."""
         return self._repository.delete_disease(name)
 
     def create_disease(self, data: dict[str, Any]) -> dict[str, Any] | None:
-        """Admin: Create a new disease."""
+        """Admin: Tạo một bệnh mới."""
         return self._repository.create_disease(data)
 
     def update_disease(self, name: str, data: dict[str, Any]) -> dict[str, Any] | None:
-        """Admin: Update a disease."""
+        """Admin: Cập nhật một bệnh."""
         return self._repository.update_disease(name, data)
 
 

@@ -11,7 +11,7 @@ def test_levenshtein():
     # 1 typo
     assert ner_service._levenshtein_distance("paracetamon", "paracetamol") == 1
     # 2 typos
-    assert ner_service._levenshtein_distance("paracetamox", "paracetamol") == 2
+    assert ner_service._levenshtein_distance("paracetamxx", "paracetamol") == 2
 
 def test_extract_entities_fuzzy():
     # Mock some data in ner_service

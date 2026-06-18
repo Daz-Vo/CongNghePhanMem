@@ -1,6 +1,6 @@
-"""Compatibility endpoints that match frontend expectations.
+"""Các endpoint tương thích phù hợp với mong đợi từ frontend.
 
-This file maps older/new frontend paths to existing auth logic.
+File này ánh xạ các đường dẫn frontend cũ/mới sang logic xác thực hiện có.
 """
 
 import logging
@@ -27,7 +27,7 @@ def login_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db),
 ):
-    """Compatibility endpoint for frontend expecting /login/access-token"""
+    """Endpoint tương thích cho frontend mong đợi đường dẫn /login/access-token"""
     user = user_repository.authenticate_user(
         db, email=form_data.username, password=form_data.password
     )

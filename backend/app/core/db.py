@@ -8,8 +8,15 @@ from app.schemas.user import UserCreate
 
 
 def init_db(session: Session) -> None:
+    """
+    Mục đích: Khởi tạo cơ sở dữ liệu SQL ban đầu bằng cách tự động tạo tài khoản Admin (superuser) đầu tiên.
+    Cơ chế hoạt động: Kiểm tra xem tài khoản email admin chỉ định trong `settings` đã tồn tại chưa. Nếu chưa, tạo mới tài khoản admin này với cờ `is_superuser=True`.
+    """
+    # session: Phiên làm việc với SQL Database
+    # existing_user: Đối tượng người dùng đã tồn tại trong cơ sở dữ liệu nếu có
     existing_user = get_user_by_email(session, settings.FIRST_SUPERUSER)
     if not existing_user:
+        # user_in: Dữ liệu schema dùng để tạo tài khoản admin đầu tiên lấy từ settings
         user_in = UserCreate(
             email=settings.FIRST_SUPERUSER,
             password=settings.FIRST_SUPERUSER_PASSWORD,

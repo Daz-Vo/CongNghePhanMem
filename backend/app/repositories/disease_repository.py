@@ -1,6 +1,6 @@
 """
-Disease repository for Neo4j operations.
-Handles disease lookups and searches.
+Repository bệnh lý cho các thao tác Neo4j.
+Xử lý các tìm kiếm và truy xuất thông tin bệnh lý.
 """
 
 import logging
@@ -12,18 +12,18 @@ logger = logging.getLogger(__name__)
 
 
 class DiseaseRepository:
-    """Repository for disease-related Neo4j operations."""
+    """Repository cho các thao tác Neo4j liên quan đến bệnh lý."""
 
     def __init__(self):
         self._repository = neo4j_repository
 
     def get_disease_by_name(self, disease_name: str) -> dict[str, Any] | None:
         """
-        Get a disease by exact name with all related information.
+        Lấy thông tin bệnh lý theo tên chính xác cùng với tất cả thông tin liên quan.
         """
         query = """
         MATCH (d:Disease {name: $name})
-        OPTIONAL MATCH (m:Medicine)-[:TREATS]->(d)
+        OPTIONAL MATCH (m:Drug)-[:TREATS]->(d)
         OPTIONAL MATCH (d)-[:HAS_SYMPTOM|RELATED_TO]->(s:Symptom)
         RETURN 
             d.name AS name,
@@ -44,7 +44,7 @@ class DiseaseRepository:
 
     def search_diseases(self, query_str: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
-        Search for diseases by name or description.
+        Tìm kiếm bệnh lý theo tên hoặc mô tả.
         """
         cypher_query = """
         MATCH (d:Disease)
@@ -70,11 +70,11 @@ class DiseaseRepository:
         self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
-        Get medicines that treat a specific disease.
+        Lấy danh sách các thuốc điều trị một bệnh lý cụ thể.
         """
         query = """
         MATCH (disease:Disease {name: $disease_name})
-        MATCH (m:Medicine)-[:TREATS]->(disease)
+        MATCH (m:Drug)-[:TREATS]->(disease)
         RETURN 
             m.name AS name,
             m.brand_name AS brand_name,
@@ -96,7 +96,7 @@ class DiseaseRepository:
 
     def get_disease_count(self) -> int:
         """
-        Get total count of diseases in database.
+        Lấy tổng số lượng bệnh lý trong cơ sở dữ liệu.
         """
         query = "MATCH (d:Disease) RETURN COUNT(d) AS count"
         try:
@@ -109,11 +109,15 @@ class DiseaseRepository:
             return 0
 
     def create_disease(self, data: dict[str, Any]) -> dict[str, Any] | None:
-        """Create a new disease node."""
+        """Tạo một nút bệnh lý mới."""
         query = """
         MERGE (d:Disease {name: $name})
         SET d += $props, d.updated_at = datetime()
-        RETURN d
+        RETURN 
+            d.name AS name,
+            d.description AS description,
+            d.icd_code AS icd_code,
+            d.updated_at AS updated_at
         """
         name = data.get("name")
         props = {k: v for k, v in data.items() if k != "name"}
@@ -125,11 +129,15 @@ class DiseaseRepository:
             return None
 
     def update_disease(self, name: str, data: dict[str, Any]) -> dict[str, Any] | None:
-        """Update an existing disease node."""
+        """Cập nhật một nút bệnh lý hiện có."""
         query = """
         MATCH (d:Disease {name: $name})
         SET d += $props, d.updated_at = datetime()
-        RETURN d
+        RETURN 
+            d.name AS name,
+            d.description AS description,
+            d.icd_code AS icd_code,
+            d.updated_at AS updated_at
         """
         try:
             results = self._repository.execute_write(query, name=name, props=data)
@@ -139,7 +147,7 @@ class DiseaseRepository:
             return None
 
     def delete_disease(self, name: str) -> bool:
-        """Delete a disease node and its relationships."""
+        """Xóa một nút bệnh lý và các mối quan hệ của nó."""
         query = """
         MATCH (d:Disease {name: $name})
         DETACH DELETE d

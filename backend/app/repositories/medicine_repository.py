@@ -1,6 +1,6 @@
 """
-Medicine repository for Neo4j operations.
-Handles medicine lookups, searches, and relationships.
+Repository dược phẩm/thuốc cho các thao tác Neo4j.
+Xử lý các tra cứu, tìm kiếm và mối quan hệ của dược phẩm/thuốc.
 """
 
 import logging
@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class MedicineRepository:
-    """Repository for medicine-related Neo4j operations."""
+    """Repository cho các thao tác Neo4j liên quan đến dược phẩm/thuốc."""
 
     def __init__(self):
         self._repository = neo4j_repository
 
     def get_medicine_by_name(self, name: str) -> dict[str, Any] | None:
         """
-        Get a medicine by exact name with all related information.
+        Lấy thông tin thuốc theo tên chính xác cùng với tất cả thông tin liên quan.
         """
         query = """
         MATCH (m:Drug)
@@ -39,9 +39,9 @@ class MedicineRepository:
             m.adverse_reactions AS adverse_reactions,
             m.updated_at AS updated_at,
             [(m)-[:CONTAINS]->(i:Ingredient) | i.name] AS ingredients,
-            [(m)-[:MANUFACTURED_BY]->(man:Manufacturer) | man.name] AS manufacturers,
+            [(m)-[:MADE_BY]->(man:Manufacturer) | man.name] AS manufacturers,
             [(m)-[:TREATS]->(dis:Disease) | dis.name] AS treated_diseases,
-            [(m)-[int:INTERACTS_WITH]->(m2:Drug) | {
+            [(m)-[int:INTERACTS_WITH]-(m2:Drug) | {
                 name: m2.name,
                 severity: int.severity,
                 description: int.description
@@ -58,7 +58,7 @@ class MedicineRepository:
 
     def search_medicines(self, query_str: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
-        Search for medicines by name, brand name, or generic name.
+        Tìm kiếm thuốc theo tên thương mại, nhãn hiệu hoặc tên chung (generic).
         """
         cypher_query = """
         MATCH (m:Drug)
@@ -89,7 +89,7 @@ class MedicineRepository:
         self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> list[dict[str, Any]]:
         """
-        Get medicines that treat a specific disease.
+        Lấy danh sách các thuốc điều trị một bệnh lý cụ thể.
         """
         query = """
         MATCH (disease:Disease {name: $disease_name})
@@ -115,11 +115,11 @@ class MedicineRepository:
 
     def get_medicine_interactions(self, name: str, limit: int = 10, skip: int = 0) -> list[dict[str, Any]]:
         """
-        Get all medicines that interact with a specific medicine.
+        Lấy tất cả các loại thuốc có tương tác với một thuốc cụ thể.
         """
         query = """
-        MATCH (medicine:Medicine {name: $name})
-        MATCH (medicine)-[int:INTERACTS_WITH]->(m2:Drug)
+        MATCH (medicine:Drug {name: $name})
+        MATCH (medicine)-[int:INTERACTS_WITH]-(m2:Drug)
         RETURN 
             m2.name AS name,
             m2.brand_name AS brand_name,
@@ -141,14 +141,14 @@ class MedicineRepository:
         self, names: list[str]
     ) -> list[dict[str, Any]]:
         """
-        Check interactions between multiple medicines.
-        Returns all pairs that have interactions.
+        Kiểm tra tương tác giữa nhiều loại thuốc.
+        Trả về tất cả các cặp thuốc có xảy ra tương tác.
         """
         if not names or len(names) < 2:
             return []
 
         query = """
-        MATCH (m1:Drug)-[int:INTERACTS_WITH]->(m2:Drug)
+        MATCH (m1:Drug)-[int:INTERACTS_WITH]-(m2:Drug)
         WHERE m1.name IN $names AND m2.name IN $names
         RETURN 
             m1.name AS medicine_1,
@@ -165,10 +165,10 @@ class MedicineRepository:
 
     def get_medicine_ingredients(self, name: str) -> list[dict[str, Any]]:
         """
-        Get all ingredients in a medicine.
+        Lấy tất cả các thành phần có trong một loại thuốc.
         """
         query = """
-        MATCH (m:Medicine {name: $name})
+        MATCH (m:Drug {name: $name})
         MATCH (m)-[:CONTAINS]->(i:Ingredient)
         RETURN 
             i.name AS name,
@@ -183,7 +183,7 @@ class MedicineRepository:
 
     def get_medicine_count(self) -> int:
         """
-        Get total count of medicines in database.
+        Lấy tổng số lượng thuốc trong cơ sở dữ liệu.
         """
         query = "MATCH (m:Drug) RETURN COUNT(m) AS count"
         try:
@@ -196,11 +196,22 @@ class MedicineRepository:
             return 0
 
     def create_medicine(self, data: dict[str, Any]) -> dict[str, Any] | None:
-        """Create a new medicine node."""
+        """Tạo một nút thuốc mới."""
         query = """
-        MERGE (m:Medicine {name: $name})
+        MERGE (m:Drug {name: $name})
         SET m += $props, m.updated_at = datetime()
-        RETURN m
+        RETURN 
+            m.name AS name,
+            m.brand_name AS brand_name,
+            m.generic_name AS generic_name,
+            m.manufacturer AS manufacturer,
+            m.purpose AS purpose,
+            m.indications AS indications,
+            m.warnings AS warnings,
+            m.dosage AS dosage,
+            m.contraindications AS contraindications,
+            m.adverse_reactions AS adverse_reactions,
+            m.updated_at AS updated_at
         """
         name = data.get("name")
         props = {k: v for k, v in data.items() if k != "name"}
@@ -212,11 +223,22 @@ class MedicineRepository:
             return None
 
     def update_medicine(self, name: str, data: dict[str, Any]) -> dict[str, Any] | None:
-        """Update an existing medicine node."""
+        """Cập nhật một nút thuốc hiện có."""
         query = """
-        MATCH (m:Medicine {name: $name})
+        MATCH (m:Drug {name: $name})
         SET m += $props, m.updated_at = datetime()
-        RETURN m
+        RETURN 
+            m.name AS name,
+            m.brand_name AS brand_name,
+            m.generic_name AS generic_name,
+            m.manufacturer AS manufacturer,
+            m.purpose AS purpose,
+            m.indications AS indications,
+            m.warnings AS warnings,
+            m.dosage AS dosage,
+            m.contraindications AS contraindications,
+            m.adverse_reactions AS adverse_reactions,
+            m.updated_at AS updated_at
         """
         try:
             results = self._repository.execute_write(query, name=name, props=data)
@@ -226,9 +248,9 @@ class MedicineRepository:
             return None
 
     def delete_medicine(self, name: str) -> bool:
-        """Delete a medicine node and its relationships."""
+        """Xóa một nút thuốc và các mối quan hệ của nó."""
         query = """
-        MATCH (m:Medicine {name: $name})
+        MATCH (m:Drug {name: $name})
         DETACH DELETE m
         """
         try:
