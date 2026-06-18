@@ -1,10 +1,18 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useUser();
+
+  const getNavClass = (path) => {
+    const isActive = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+    return isActive
+      ? "text-primary font-semibold transition-colors"
+      : "hover:text-foreground transition-colors";
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-card/80 backdrop-blur-md border-b border-border">
@@ -14,9 +22,9 @@ const Navbar = () => {
           <span>MediAI</span>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <Link to="/" className="text-primary transition-colors">Home</Link>
-          <Link to="/medicines" className="hover:text-foreground transition-colors">Medicines</Link>
-          <Link to="/diseases" className="hover:text-foreground transition-colors">Diseases</Link>
+          <Link to="/" className={getNavClass('/')}>Home</Link>
+          <Link to="/medicines" className={getNavClass('/medicines')}>Medicines</Link>
+          <Link to="/diseases" className={getNavClass('/diseases')}>Diseases</Link>
         </nav>
         <div className="flex items-center gap-4">
           {user ? (

@@ -92,7 +92,7 @@ const MedicineDetail = () => {
             <iconify-icon icon={isSaved ? "lucide:bookmark-check" : "lucide:bookmark"} class="mr-2"></iconify-icon>
             {isSaved ? 'Saved' : 'Save'}
           </button>
-          <button onClick={() => navigate(user ? '/app/chat' : '/chat')} className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-sm font-medium transition-colors flex items-center shadow-sm">
+          <button onClick={() => navigate(user ? '/app/chat' : '/chat', { state: { q: `Tell me detailed information about the medicine ${medicine.name}` } })} className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-sm font-medium transition-colors flex items-center shadow-sm">
             <iconify-icon icon="lucide:sparkles" class="mr-2"></iconify-icon>
             Ask AI about this
           </button>

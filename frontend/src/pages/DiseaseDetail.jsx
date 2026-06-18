@@ -162,7 +162,7 @@ const DiseaseDetail = () => {
 
       {/* Ask AI FAB */}
       <div className="fixed bottom-6 right-6 z-50">
-        <button onClick={() => navigate('/app/chat')} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/30 rounded-full py-3 px-6 flex items-center gap-3 transition-transform hover:scale-105">
+        <button onClick={() => navigate(localStorage.getItem('access_token') ? '/app/chat' : '/chat', { state: { q: `Tell me about the condition: ${disease.name}. What are the symptoms and treatments?` } })} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/30 rounded-full py-3 px-6 flex items-center gap-3 transition-transform hover:scale-105">
           <iconify-icon icon="lucide:bot" class="text-2xl"></iconify-icon>
           <div className="text-left">
             <div className="text-sm font-bold">Ask AI Assistant</div>

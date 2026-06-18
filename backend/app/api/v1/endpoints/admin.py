@@ -139,9 +139,15 @@ def admin_get_ai_logs(
     return {"total": total, "items": logs, "page": page, "limit": limit}
 
 from pydantic import BaseModel
+from typing import Optional, Dict, Any, List
+
 class AIConfigUpdate(BaseModel):
-    model: str
-    api_key: str
+    model: Optional[str] = None
+    api_key: Optional[str] = None
+    system_version: Optional[str] = None
+    performance_stats: Optional[Dict[str, float]] = None
+    feature_modules: Optional[Dict[str, bool]] = None
+    disclaimers: Optional[List[Dict[str, str]]] = None
 
 @router.get("/ai-config")
 def admin_get_ai_config(
@@ -154,7 +160,11 @@ def admin_get_ai_config(
     from app.services.chat_service import chat_service
     config = get_ai_settings()
     quota_used = chat_service.get_monthly_ai_usage(db)
-    return {"model": config["model"], "api_key": config["api_key"], "quota_used": quota_used}
+    
+    # Gộp quota_used vào kết quả trả về
+    response_data = dict(config)
+    response_data["quota_used"] = quota_used
+    return response_data
 
 @router.post("/ai-config")
 def admin_update_ai_config(
@@ -164,8 +174,59 @@ def admin_update_ai_config(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     from app.core.ai_settings_store import save_ai_settings
-    save_ai_settings(config_in.model, config_in.api_key)
+    
+    # Chỉ lưu các trường có giá trị được gửi lên
+    update_data = config_in.model_dump(exclude_unset=True)
+    if update_data:
+        save_ai_settings(update_data)
+        
     return {"success": True}
+
+@router.get("/ai-models")
+async def admin_get_ai_models(
+    current_user: Annotated[User, Depends(get_current_user)],
+    api_key: Optional[str] = Query(None)
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    import httpx
+    from app.core.ai_settings_store import get_ai_settings
+    
+    key_to_use = api_key
+    if not key_to_use:
+        config = get_ai_settings()
+        key_to_use = config.get("api_key")
+        
+    # Fallback default models if no key
+    fallback_models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.5-flash"]
+    if not key_to_use:
+        return {"models": fallback_models}
+        
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models?key={key_to_use}"
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(endpoint, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                available_models = []
+                for m in data.get("models", []):
+                    if "generateContent" in m.get("supportedGenerationMethods", []):
+                        name = m.get("name", "").replace("models/", "")
+                        if name.startswith("gemini"):
+                            available_models.append(name)
+                
+                # Nếu API trả về rỗng, dùng fallback
+                if not available_models:
+                    return {"models": fallback_models}
+                    
+                # Sắp xếp để ưu tiên bản mới (hoặc đảo ngược chuỗi để 3.5 lên đầu)
+                available_models.sort(reverse=True)
+                return {"models": available_models}
+            else:
+                return {"models": fallback_models}
+        except Exception:
+            return {"models": fallback_models}
 
 class AITestRequest(BaseModel):
     api_key: str

@@ -6,15 +6,25 @@ const AdminAILogs = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  
   // Model Config State
-  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [availableModels, setAvailableModels] = useState([]);
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [apiKey, setApiKey] = useState('');
-  const [quotaUsed, setQuotaUsed] = useState(0); // Real count
+  const [quotaUsed, setQuotaUsed] = useState(0); 
   const [quotaPercent, setQuotaPercent] = useState(0);
+  
+  // New States for AI Config
+  const [systemVersion, setSystemVersion] = useState('v4.2 Active');
+  const [performanceStats, setPerformanceStats] = useState({ accuracy: 98.4, safety_overrides: 1.2, latency: 850 });
+  const [featureModules, setFeatureModules] = useState({ symptom_checker: true, interaction_check: true, gemini_integration: true });
+  const [disclaimers, setDisclaimers] = useState([]);
+  
   const [configSaving, setConfigSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   const fetchLogs = async (pageNum = 1) => {
     try {
@@ -25,20 +35,41 @@ const AdminAILogs = () => {
       } else {
         setLogs(prev => [...prev, ...(data.items || [])]);
       }
-      // Also fetch ai-config
+      
+      // Fetch available models
       try {
         const token = localStorage.getItem('access_token');
-        const configRes = await fetch('http://localhost:8000/api/v1/admin/ai-config', {
+        const modelsRes = await fetch(`${API_URL}/api/v1/admin/ai-models`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (modelsRes.ok) {
+          const modelsData = await modelsRes.json();
+          if (modelsData.models && modelsData.models.length > 0) {
+            setAvailableModels(modelsData.models);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch ai models", e);
+      }
+
+      // Fetch ai-config
+      try {
+        const token = localStorage.getItem('access_token');
+        const configRes = await fetch(`${API_URL}/api/v1/admin/ai-config`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (configRes.ok) {
           const config = await configRes.json();
           if (config.model) setSelectedModel(config.model);
-          if (config.api_key) setApiKey(config.api_key);
+          if (config.api_key !== undefined) setApiKey(config.api_key);
           if (config.quota_used !== undefined) {
             setQuotaUsed(config.quota_used);
             setQuotaPercent(Math.min(100, Math.round((config.quota_used / 30000) * 100)));
           }
+          if (config.system_version) setSystemVersion(config.system_version);
+          if (config.performance_stats) setPerformanceStats(config.performance_stats);
+          if (config.feature_modules) setFeatureModules(config.feature_modules);
+          if (config.disclaimers) setDisclaimers(config.disclaimers);
         }
       } catch (e) {
         console.error("Failed to fetch ai config", e);
@@ -54,6 +85,13 @@ const AdminAILogs = () => {
   useEffect(() => {
     fetchLogs(1);
   }, []);
+
+  // Ensure selectedModel is valid once availableModels are loaded
+  useEffect(() => {
+    if (availableModels.length > 0 && !availableModels.includes(selectedModel)) {
+      setSelectedModel(availableModels[0]);
+    }
+  }, [availableModels, selectedModel]);
 
   const loadMore = () => {
     const nextPage = page + 1;
@@ -71,13 +109,20 @@ const AdminAILogs = () => {
       setConfigSaving(true);
       setTestResult(null);
       const token = localStorage.getItem('access_token');
-      const res = await fetch('http://localhost:8000/api/v1/admin/ai-config', {
+      const res = await fetch(`${API_URL}/api/v1/admin/ai-config`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ model: selectedModel, api_key: apiKey })
+        body: JSON.stringify({ 
+          model: selectedModel, 
+          api_key: apiKey,
+          system_version: systemVersion,
+          performance_stats: performanceStats,
+          feature_modules: featureModules,
+          disclaimers: disclaimers
+        })
       });
       if (res.ok) {
         alert("Configuration saved successfully!");
@@ -100,7 +145,17 @@ const AdminAILogs = () => {
       setTestingConnection(true);
       setTestResult(null);
       const token = localStorage.getItem('access_token');
-      const res = await fetch('http://localhost:8000/api/v1/admin/ai-config/test', {
+      
+      // Update models list when testing connection too
+      fetch(`${API_URL}/api/v1/admin/ai-models?api_key=${apiKey}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.models && data.models.length > 0) setAvailableModels(data.models);
+      }).catch(e => console.error(e));
+
+      const res = await fetch(`${API_URL}/api/v1/admin/ai-config/test`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -115,6 +170,37 @@ const AdminAILogs = () => {
     } finally {
       setTestingConnection(false);
     }
+  };
+
+  // Disclaimers Handlers
+  const handleAddDisclaimer = () => {
+    const title = window.prompt("Enter disclaimer title:");
+    if (!title) return;
+    const text = window.prompt("Enter disclaimer text:");
+    if (!text) return;
+    const newId = "desc_" + Date.now();
+    setDisclaimers([...disclaimers, { id: newId, title, text }]);
+  };
+
+  const handleEditDisclaimer = (id) => {
+    const item = disclaimers.find(d => d.id === id);
+    if (!item) return;
+    const title = window.prompt("Edit title:", item.title);
+    if (title === null) return;
+    const text = window.prompt("Edit text:", item.text);
+    if (text === null) return;
+    setDisclaimers(disclaimers.map(d => d.id === id ? { ...d, title, text } : d));
+  };
+
+  const handleDeleteDisclaimer = (id) => {
+    if (window.confirm("Are you sure you want to delete this disclaimer?")) {
+      setDisclaimers(disclaimers.filter(d => d.id !== id));
+    }
+  };
+
+  // Format model name for UI
+  const formatModelName = (name) => {
+    return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   return (
@@ -136,7 +222,9 @@ const AdminAILogs = () => {
             <h2 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
               <iconify-icon icon="lucide:cpu" class="text-primary"></iconify-icon> Model Configuration
             </h2>
-            <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full border border-primary/20">v4.2 Active</span>
+            <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full border border-primary/20">
+              {systemVersion || 'v4.2 Active'}
+            </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -152,10 +240,17 @@ const AdminAILogs = () => {
                     onChange={(e) => setSelectedModel(e.target.value)}
                     className="w-full bg-background border border-input rounded-lg pl-10 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
                   >
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Google)</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Google)</option>
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Stable)</option>
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Preview - High Load)</option>
+                    {availableModels.length > 0 ? (
+                      availableModels.map(model => (
+                        <option key={model} value={model}>{formatModelName(model)}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                        <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                      </>
+                    )}
                   </select>
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-muted-foreground">
                     <iconify-icon icon="lucide:chevron-down"></iconify-icon>
@@ -202,17 +297,22 @@ const AdminAILogs = () => {
               </label>
               <div className="space-y-4 pt-2">
                 {[
-                  { label: 'Symptom Checker', checked: true, desc: 'Analyze user symptoms' },
-                  { label: 'Medication Interaction Check', checked: true, desc: 'Check Neo4j for drug interactions' },
-                  { label: 'Gemini API Integration', checked: true, desc: 'Use AI models for natural responses' },
+                  { id: 'symptom_checker', label: 'Symptom Checker', desc: 'Analyze user symptoms' },
+                  { id: 'interaction_check', label: 'Medication Interaction Check', desc: 'Check Neo4j for drug interactions' },
+                  { id: 'gemini_integration', label: 'Gemini API Integration', desc: 'Use AI models for natural responses' },
                 ].map((item) => (
-                  <label key={item.label} className="flex items-start justify-between cursor-pointer group">
+                  <label key={item.id} className="flex items-start justify-between cursor-pointer group">
                     <div>
                       <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{item.label}</span>
                       <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
                     </div>
                     <div className="relative inline-flex items-center cursor-pointer mt-1">
-                      <input type="checkbox" className="sr-only peer" defaultChecked={item.checked} />
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={featureModules[item.id] || false} 
+                        onChange={(e) => setFeatureModules({...featureModules, [item.id]: e.target.checked})}
+                      />
                       <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                     </div>
                   </label>
@@ -254,9 +354,9 @@ const AdminAILogs = () => {
             </h2>
             <div className="space-y-4">
               {[
-                { label: 'Response Accuracy', value: '98.4%', width: 'w-[98%]', color: 'bg-blue-400' },
-                { label: 'Safety Overrides', value: '1.2%', width: 'w-[1.2%]', color: 'bg-destructive' },
-                { label: 'Avg Latency', value: '850ms', width: 'w-[40%]', color: 'bg-primary' },
+                { label: 'Response Accuracy', value: `${performanceStats.accuracy || 0}%`, width: `${performanceStats.accuracy || 0}%`, color: 'bg-blue-400' },
+                { label: 'Safety Overrides', value: `${performanceStats.safety_overrides || 0}%`, width: `${performanceStats.safety_overrides || 0}%`, color: 'bg-destructive' },
+                { label: 'Avg Latency', value: `${performanceStats.latency || 0}ms`, width: '40%', color: 'bg-primary' },
               ].map((m) => (
                 <div key={m.label}>
                   <div className="flex justify-between text-sm mb-1">
@@ -264,7 +364,7 @@ const AdminAILogs = () => {
                     <span className="font-medium text-foreground">{m.value}</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
-                    <div className={`${m.color} h-2 rounded-full ${m.width}`}></div>
+                    <div className={`${m.color} h-2 rounded-full`} style={{ width: m.width }}></div>
                   </div>
                 </div>
               ))}
@@ -286,26 +386,32 @@ const AdminAILogs = () => {
               <h2 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
                 <iconify-icon icon="lucide:message-square-plus" class="text-primary"></iconify-icon> Standard Disclaimers
               </h2>
-              <button className="text-sm text-primary font-medium hover:underline flex items-center gap-1">
+              <button 
+                onClick={handleAddDisclaimer}
+                className="text-sm text-primary font-medium hover:underline flex items-center gap-1"
+              >
                 <iconify-icon icon="lucide:plus"></iconify-icon> Add New
               </button>
             </div>
             <div className="p-6 space-y-4">
-              {[
-                { title: 'Emergency Prefix', text: '"If you are experiencing a medical emergency, please call 911 or visit the nearest emergency room immediately."' },
-                { title: 'Standard Medical Disclaimer', text: '"I am an AI assistant, not a doctor. The information provided is for educational purposes and should not replace professional medical advice."' },
-              ].map((d) => (
-                <div key={d.title} className="flex items-start justify-between gap-4 p-4 border border-border rounded-lg bg-background">
+              {disclaimers.length > 0 ? disclaimers.map((d) => (
+                <div key={d.id} className="flex items-start justify-between gap-4 p-4 border border-border rounded-lg bg-background">
                   <div>
                     <h4 className="text-sm font-semibold text-foreground mb-1">{d.title}</h4>
                     <p className="text-xs text-muted-foreground">{d.text}</p>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
-                    <button className="p-1.5 text-muted-foreground hover:text-primary transition-colors"><iconify-icon icon="lucide:pencil"></iconify-icon></button>
-                    <button className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><iconify-icon icon="lucide:trash-2"></iconify-icon></button>
+                    <button onClick={() => handleEditDisclaimer(d.id)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
+                      <iconify-icon icon="lucide:pencil"></iconify-icon>
+                    </button>
+                    <button onClick={() => handleDeleteDisclaimer(d.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
+                      <iconify-icon icon="lucide:trash-2"></iconify-icon>
+                    </button>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No disclaimers configured.</p>
+              )}
             </div>
           </div>
         </div>

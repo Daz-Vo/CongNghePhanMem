@@ -141,7 +141,7 @@ const DiseaseSearch = () => {
                <span className="px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-md">API Data</span>
             </div>
             <button
-              onClick={() => navigate(`/app/diseases/${encodeURIComponent(d.name)}`)}
+              onClick={() => navigate(localStorage.getItem('access_token') ? `/app/diseases/${encodeURIComponent(d.name)}` : `/diseases/${encodeURIComponent(d.name)}`)}
               className="w-full py-2.5 border border-border rounded-xl text-sm font-medium text-foreground hover:bg-secondary hover:text-primary transition-colors mt-auto"
             >
               View Details
