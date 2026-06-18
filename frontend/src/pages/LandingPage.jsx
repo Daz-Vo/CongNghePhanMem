@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MedicinesService } from '../client';
+import { MedicinesService, DiseasesService } from '../client';
 import { useUser } from '../context/UserContext';
 
 const colorMap = {
@@ -34,11 +34,16 @@ const LandingPage = () => {
 
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const res = await MedicinesService.searchMedicinesApiV1MedicinesSearchGet({ q: query.trim(), limit: 5, skip: 0 });
-        setSuggestions(res.items || []);
+        const [medRes, disRes] = await Promise.all([
+          MedicinesService.searchMedicinesApiV1MedicinesSearchGet({ q: query.trim(), limit: 3, skip: 0 }).catch(() => ({items: []})),
+          DiseasesService.searchDiseasesApiV1DiseasesSearchGet({ q: query.trim(), limit: 3, skip: 0 }).catch(() => ({items: []}))
+        ]);
+        const meds = (medRes.items || []).map(m => ({ ...m, type: 'medicine' }));
+        const diseases = (disRes.items || []).map(d => ({ ...d, type: 'disease' }));
+        setSuggestions([...meds, ...diseases]);
         setShowSuggestions(true);
       } catch (err) {
-        console.error('Failed to fetch medicine suggestions', err);
+        console.error('Failed to fetch suggestions', err);
       }
     }, 300);
   }, [query]);
@@ -49,8 +54,13 @@ const LandingPage = () => {
     if (!searchQuery.trim()) return;
     setLoading(true);
     try {
-      const response = await MedicinesService.searchMedicinesApiV1MedicinesSearchGet({ q: searchQuery.trim(), limit: 9, skip: 0 });
-      setSearchResults(response.items || []);
+      const [medRes, disRes] = await Promise.all([
+        MedicinesService.searchMedicinesApiV1MedicinesSearchGet({ q: searchQuery.trim(), limit: 6, skip: 0 }).catch(() => ({items: []})),
+        DiseasesService.searchDiseasesApiV1DiseasesSearchGet({ q: searchQuery.trim(), limit: 6, skip: 0 }).catch(() => ({items: []}))
+      ]);
+      const meds = (medRes.items || []).map(m => ({ ...m, type: 'medicine' }));
+      const diseases = (disRes.items || []).map(d => ({ ...d, type: 'disease' }));
+      setSearchResults([...meds, ...diseases]);
       // Scroll to search results
       setTimeout(() => {
         document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth' });
@@ -63,9 +73,13 @@ const LandingPage = () => {
     }
   };
 
-  const openDetails = (name) => {
+  const openDetails = (name, type = 'medicine') => {
     const prefix = user ? '/app' : '';
-    navigate(`${prefix}/medicines/${encodeURIComponent(name)}`);
+    if (type === 'disease') {
+      navigate(`${prefix}/diseases/${encodeURIComponent(name)}`);
+    } else {
+      navigate(`${prefix}/medicines/${encodeURIComponent(name)}`);
+    }
   };
 
   return (
@@ -111,14 +125,17 @@ const LandingPage = () => {
                 />
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute z-30 w-full mt-2 bg-card border border-border rounded-xl shadow-lg max-h-60 overflow-auto text-left">
-                    {suggestions.map((med) => (
+                    {suggestions.map((item) => (
                       <button
-                        key={med.name}
-                        className="w-full text-left px-5 py-3 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0 flex flex-col"
-                        onMouseDown={() => handleSearch(med.name)}
+                        key={item.name + item.type}
+                        className="w-full text-left px-5 py-3 text-sm hover:bg-secondary transition-colors border-b border-border last:border-0 flex items-center justify-between"
+                        onMouseDown={() => handleSearch(item.name)}
                       >
-                        <span className="font-semibold text-foreground">{med.name}</span>
-                        {med.generic_name && <span className="text-xs text-muted-foreground mt-0.5">{med.generic_name}</span>}
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-foreground">{item.name}</span>
+                          {item.generic_name && <span className="text-xs text-muted-foreground mt-0.5">{item.generic_name}</span>}
+                        </div>
+                        <span className="text-xs font-medium px-2 py-1 bg-secondary rounded-md text-muted-foreground capitalize">{item.type}</span>
                       </button>
                     ))}
                   </div>
@@ -162,22 +179,22 @@ const LandingPage = () => {
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {searchResults.map((med, idx) => {
+                {searchResults.map((item, idx) => {
                   const colorKey = Object.keys(colorMap)[idx % Object.keys(colorMap).length];
                   return (
-                    <div key={med.name} className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col relative group">
+                    <div key={item.name + item.type} className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col relative group">
                       <div className="flex items-center gap-3 mb-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colorMap[colorKey]}`}>
-                          <iconify-icon icon="lucide:pill" class="text-2xl"></iconify-icon>
+                          <iconify-icon icon={item.type === 'disease' ? "lucide:activity" : "lucide:pill"} class="text-2xl"></iconify-icon>
                         </div>
                         <div className="text-left">
-                          <h3 className="font-heading font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">{med.name}</h3>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{med.generic_name || 'Medicine'}</p>
+                          <h3 className="font-heading font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">{item.name}</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-1 capitalize">{item.type}</p>
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1 text-left">{med.dosage || 'No dosage information available.'}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1 text-left">{item.description || item.dosage || 'No description available.'}</p>
                       <button
-                        onClick={() => openDetails(med.name)}
+                        onClick={() => openDetails(item.name, item.type)}
                         className="w-full py-2.5 border border-border rounded-xl text-sm font-medium text-foreground hover:bg-secondary hover:text-primary transition-colors mt-auto"
                       >
                         View Details
@@ -234,15 +251,14 @@ const LandingPage = () => {
 
               <div className="bg-card rounded-2xl p-8 shadow-sm border border-border/50 hover:shadow-md transition-all flex flex-col items-start group">
                 <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <iconify-icon icon="lucide:shield-alert" class="text-3xl"></iconify-icon>
+                  <iconify-icon icon="lucide:activity" class="text-3xl"></iconify-icon>
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Interaction Checker</h3>
+                <h3 className="text-xl font-semibold mb-3">Disease Lookup</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-6 flex-1">
-                  Input multiple medications to check for potential dangerous interactions and receive safety
-                  recommendations.
+                  Search for medical conditions, symptoms, and treatment guidelines to stay informed about your health.
                 </p>
-                <button onClick={() => navigate('/app/interactions')} className="text-amber-600 font-medium text-sm flex items-center gap-1 hover:gap-2 transition-all">
-                  Check Interactions <iconify-icon icon="lucide:arrow-right"></iconify-icon>
+                <button onClick={() => navigate('/diseases')} className="text-amber-600 font-medium text-sm flex items-center gap-1 hover:gap-2 transition-all">
+                  Browse Diseases <iconify-icon icon="lucide:arrow-right"></iconify-icon>
                 </button>
               </div>
             </div>

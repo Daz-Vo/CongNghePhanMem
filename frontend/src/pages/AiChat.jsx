@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ChatService } from '../client';
 import { useUser } from '../context/UserContext';
 
@@ -17,6 +18,8 @@ const AiChat = () => {
   const [sending, setSending] = useState(false); // sending: Trạng thái đang gửi tin nhắn lên server để khóa input/nút bấm
   const [loadingHistory, setLoadingHistory] = useState(true); // loadingHistory: Trạng thái đang tải lịch sử chat từ backend
   const bottomRef = useRef(null); // bottomRef: Tham chiếu tới phần tử cuối danh sách tin nhắn để tự động cuộn xuống khi có tin nhắn mới
+  const location = useLocation();
+  const initialSentRef = useRef(false);
 
   // Effect: Tự động tải lịch sử chat từ API backend khi Component được mount
   useEffect(() => {
@@ -54,9 +57,19 @@ const AiChat = () => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Effect: Tự động gửi câu hỏi nếu có truyền từ trang khác (như Medicine/Disease Detail)
+  useEffect(() => {
+    if (!loadingHistory && location.state?.q && !initialSentRef.current) {
+      initialSentRef.current = true;
+      sendMessage(location.state.q);
+      // Xoá state để không gửi lại nếu user F5 trang
+      window.history.replaceState({}, document.title);
+    }
+  }, [loadingHistory, location.state]);
+
   // sendMessage: Hàm xử lý gửi tin nhắn lên API và nhận phản hồi RAG
   const sendMessage = async (text) => {
-    const msgText = text || input; // msgText: Văn bản tin nhắn thực tế cần gửi (ưu tiên tham số truyền vào hoặc dùng input state)
+    const msgText = typeof text === 'string' ? text : input; // msgText: Văn bản tin nhắn thực tế cần gửi (ưu tiên tham số truyền vào hoặc dùng input state)
     if (!msgText.trim() || sending) return;
 
     const userMsg = { id: Date.now(), role: 'user', text: msgText }; // userMsg: Đối tượng tin nhắn của người dùng để cập nhật lên UI

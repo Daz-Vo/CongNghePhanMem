@@ -111,9 +111,16 @@ const AdminReports = () => {
     { label: 'AI Accuracy Rate', value: '98.4%', icon: 'lucide:check-circle', iconBg: 'bg-primary/10 text-primary', trend: '+1.1%' },
   ];
 
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
   const formatTime = (isoString) => {
     const date = new Date(isoString);
     return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleExportPDF = () => {
+    // Basic print trick for PDF
+    window.print();
   };
 
   return (
@@ -121,7 +128,7 @@ const AdminReports = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-xl font-heading font-semibold text-foreground">Reports & Statistics</h1>
         <div className="flex items-center gap-4">
-          <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
+          <button onClick={handleExportPDF} className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
             <iconify-icon icon="lucide:download"></iconify-icon> Export Report
           </button>
         </div>
