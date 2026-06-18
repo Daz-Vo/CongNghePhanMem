@@ -17,6 +17,14 @@ const Register = () => {
       setError('Passwords do not match');
       return;
     }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+    if (email.length < 8) {
+      setError('Email must be at least 8 characters long');
+      return;
+    }
     setError(null);
     setLoading(true);
     try {

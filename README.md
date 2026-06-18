@@ -20,6 +20,36 @@ Dự án này xây dựng một hệ thống backend + frontend cho:
 * Xác thực người dùng và quản lý quyền.
 * Chạy thử nhanh bằng Docker Compose.
 
+## Cấu trúc thư mục (Source Code Structure)
+
+Dự án được phân chia rõ ràng theo mô hình Client-Server:
+
+```text
+medical-chatbot/
+├── backend/                  # Mã nguồn Backend (FastAPI, Python)
+│   ├── alembic/              # Migration DB Postgres
+│   ├── app/                  # Logic chính của Backend
+│   │   ├── api/              # Định nghĩa các Route / Endpoints (Auth, Chat, Tra cứu)
+│   │   ├── core/             # Cấu hình môi trường, bảo mật, AI Settings, CORS
+│   │   ├── crud/             # Các hàm truy vấn CSDL Postgres (User, Lịch sử)
+│   │   ├── models/           # Định nghĩa cấu trúc bảng Postgres (ORM)
+│   │   ├── services/         # Xử lý nghiệp vụ lõi (LLM, NER, Graph Search, Wikipedia)
+│   │   └── data/             # File CSV gốc chứa kiến thức y khoa (Thuốc, Bệnh, Triệu chứng...)
+│   ├── scripts/              # Các file bash script tự động khởi tạo hệ thống
+│   └── requirements.txt      # Danh sách các thư viện Python
+├── frontend/                 # Mã nguồn Frontend (ReactJS, Vite)
+│   ├── public/               # Tài nguyên public (Hình ảnh, Icons)
+│   └── src/                  # Mã nguồn chính của giao diện
+│       ├── components/       # Các UI Component dùng chung (Navbar, Sidebar, Footer)
+│       ├── layouts/          # Bố cục giao diện (AdminLayout, PublicLayout, DashboardLayout)
+│       ├── pages/            # Các trang cụ thể (AiChat, MedicineSearch, AdminDashboard, Login...)
+│       └── utils/            # Các hàm tiện ích hỗ trợ
+├── docs/                     # Thư mục lưu trữ tài liệu phân tích thiết kế, Sơ đồ UML
+├── docker-compose.yml        # Tệp cấu hình khởi chạy toàn bộ 4 컨테이너 (FE, BE, Postgres, Neo4j)
+├── .env.example              # File mẫu chứa các biến môi trường
+└── README.md                 # Tài liệu hướng dẫn cài đặt và sử dụng (Chính là file này)
+```
+
 ## Yêu cầu
 
 * Docker và Docker Compose
