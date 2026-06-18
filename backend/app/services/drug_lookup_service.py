@@ -1,6 +1,6 @@
 """
-Drug lookup service.
-Handles drug searches and retrievals.
+Dịch vụ tra cứu thuốc (biệt dược/hoạt chất).
+Xử lý các tìm kiếm và truy xuất thông tin thuốc.
 """
 
 import logging
@@ -13,15 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 class DrugLookupService:
-    """Service for drug lookups and searches."""
+    """Dịch vụ tra cứu và tìm kiếm thông tin thuốc."""
 
     def __init__(self):
         self._repository = drug_repository
 
     def search_drugs(self, query: str, limit: int = 10, skip: int = 0) -> DrugSearchResponse:
         """
-        Search for drugs by name, brand name, or generic name.
-        Returns a DrugSearchResponse with matching drugs.
+        Tìm kiếm thuốc theo tên thương mại, nhãn hiệu hoặc tên chung (generic).
+        Trả về DrugSearchResponse chứa danh sách thuốc khớp với truy vấn.
         """
         logger.info(f"Searching drugs with query: '{query}', limit: {limit}, skip: {skip}")
 
@@ -49,8 +49,8 @@ class DrugLookupService:
 
     def get_drug_detail(self, drug_name: str) -> DrugDetailResponse | None:
         """
-        Get full details of a drug including ingredients, manufacturers, and interactions.
-        Returns DrugDetailResponse or None if not found.
+        Lấy thông tin chi tiết đầy đủ của một loại thuốc bao gồm các thành phần, nhà sản xuất và tương tác.
+        Trả về DrugDetailResponse hoặc None nếu không tìm thấy.
         """
         logger.info(f"Fetching details for drug: '{drug_name}'")
 
@@ -60,21 +60,21 @@ class DrugLookupService:
                 logger.warning(f"Drug '{drug_name}' not found")
                 return None
 
-            # Transform ingredients
+            # Chuyển đổi thành phần
             ingredients = [
                 {"name": ing, "description": None}
                 for ing in (drug.get("ingredients") or [])
                 if ing
             ]
 
-            # Transform manufacturers
+            # Chuyển đổi nhà sản xuất
             manufacturers = [
                 {"name": mfr, "country": None}
                 for mfr in (drug.get("manufacturers") or [])
                 if mfr
             ]
 
-            # Transform interactions
+            # Chuyển đổi tương tác
             interactions = [
                 {
                     "name": inter.get("name", ""),
@@ -106,7 +106,7 @@ class DrugLookupService:
 
     def get_drug_ingredients(self, drug_name: str) -> list[dict[str, Any]]:
         """
-        Get all ingredients in a drug.
+        Lấy tất cả các thành phần trong một loại thuốc.
         """
         logger.info(f"Fetching ingredients for drug: '{drug_name}'")
 
@@ -123,7 +123,7 @@ class DrugLookupService:
         self, disease_name: str, limit: int = 10, skip: int = 0
     ) -> DrugSearchResponse:
         """
-        Get drugs that treat a specific disease.
+        Lấy danh sách các loại thuốc điều trị một bệnh cụ thể.
         """
         logger.info(f"Fetching drugs for disease: '{disease_name}', limit: {limit}, skip: {skip}")
 

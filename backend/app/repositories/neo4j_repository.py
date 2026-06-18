@@ -8,7 +8,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 def clean_neo4j_types(data: Any) -> Any:
-    """Recursively convert Neo4j specific types (like DateTime) to standard Python types."""
+    """Chuyển đổi đệ quy các kiểu dữ liệu đặc trưng của Neo4j (như DateTime) sang các kiểu dữ liệu tiêu chuẩn của Python."""
     if hasattr(data, 'isoformat') and callable(getattr(data, 'isoformat')):
         return data.isoformat()
     elif isinstance(data, dict):
@@ -19,7 +19,7 @@ def clean_neo4j_types(data: Any) -> Any:
 
 
 class Neo4jRepository:
-    """Handles low-level Neo4j driver operations."""
+    """Xử lý các thao tác trình điều khiển (driver) Neo4j ở cấp độ thấp."""
 
     def __init__(self) -> None:
         self._driver = None
@@ -37,7 +37,7 @@ class Neo4jRepository:
                 "Install it with `pip install neo4j`."
             ) from exc
             
-        # Optimize driver for local container/bolt usage
+        # Tối ưu hóa driver cho việc sử dụng container cục bộ / giao thức bolt
         logger.info(f"Connecting to Neo4j at: {settings.NEO4J_URI}")
         logger.info(f"Neo4j database configured: {settings.NEO4J_DATABASE}")
         self._driver = GraphDatabase.driver(
@@ -106,8 +106,8 @@ class Neo4jRepository:
     )
     def verify_connectivity(self) -> bool:
         """
-        Verify connection to Neo4j with retries.
-        Helpful during startup when Neo4j container might be booting.
+        Xác minh kết nối tới Neo4j với cơ chế thử lại (retries).
+        Hữu ích trong quá trình khởi động khi container Neo4j có thể đang khởi tạo.
         """
         try:
             self._ensure_driver()
@@ -117,7 +117,7 @@ class Neo4jRepository:
                 record = result.single()
                 return record is not None and record["result"] == 1
         except Exception as error:
-            # We log as warning because tenacity will retry
+            # Chúng tôi ghi log ở mức warning vì tenacity sẽ thực hiện thử lại
             logger.warning(f"Neo4j connectivity attempt failed: {error}")
             return False
 

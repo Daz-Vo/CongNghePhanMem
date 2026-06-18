@@ -35,7 +35,7 @@ def login_access_token(
     db: Session = Depends(get_db),
 ):
     """
-    OAuth2 compatible token login, retrieve an access token for future requests.
+    Đăng nhập lấy token tương thích với OAuth2, lấy access token cho các yêu cầu tiếp theo.
     """
     user = user_repository.authenticate_user(
         db, email=form_data.username, password=form_data.password
@@ -66,7 +66,7 @@ def login_alias(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db),
 ):
-    """Spec compliance alias for login."""
+    """Bí danh tuân thủ đặc tả (Spec compliance) cho việc đăng nhập."""
     return login_access_token(form_data, db)
 
 
@@ -94,7 +94,7 @@ def forgot_password(
             except Exception as exc:
                 logger.warning(f"Password reset email could not be sent: {exc}")
     
-    # Always return success message for security
+    # Luôn trả về thông báo thành công vì lý do bảo mật
     return PasswordResetResponse(
         message="If that email is registered, we sent a password recovery link"
     )
@@ -123,6 +123,6 @@ def register_alias(
     user_in: UserCreate,
     db: Session = Depends(get_db),
 ):
-    """Spec compliance alias for registration."""
+    """Bí danh tuân thủ đặc tả (Spec compliance) cho việc đăng ký."""
     from app.api.v1.endpoints.users import signup
     return signup(user_in, db)

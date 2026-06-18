@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 class LLMService:
     """
-    Service for interacting with LLM providers (OpenAI, Gemini, Groq).
-    Includes safety rules, retry logic, and fallback mechanisms for medical AI.
+    Dịch vụ tương tác với các nhà cung cấp LLM (OpenAI, Gemini, Groq).
+    Bao gồm các quy tắc an toàn, logic thử lại (retry) và cơ chế dự phòng cho AI y tế.
     """
 
     SYSTEM_PROMPT = (
@@ -45,15 +45,15 @@ class LLMService:
 
     async def detect_language(self, text: str) -> str:
         """
-        Detect the language of the input text.
-        Uses rule-based detection for Vietnamese/English first, then falls back to Gemini.
+        Nhận diện ngôn ngữ của văn bản đầu vào.
+        Sử dụng nhận diện theo luật cho tiếng Việt/tiếng Anh trước, sau đó chuyển sang dùng Gemini làm phương án dự phòng.
         """
         if not text:
             return "Unknown"
 
         normalized = text.strip().lower()
 
-        # Quick heuristic for Vietnamese common words.
+        # Quy tắc nhanh cho các từ tiếng Việt phổ biến.
         vietnamese_keywords = [
             "tôi", "bạn", "thuốc", "triệu chứng", "đau", "đau bụng", "uống", "không", "là gì",
             "một", "có", "và", "họ", "đừng", "có thể", "vì", "nhiều", "đổ mồ hôi"
@@ -61,7 +61,7 @@ class LLMService:
         if any(word in normalized for word in vietnamese_keywords):
             return "Vietnamese"
 
-        # Quick heuristic for English keywords.
+        # Quy tắc nhanh cho các từ khóa tiếng Anh.
         english_keywords = [
             "what", "is", "drug", "symptom", "pain", "aspirin", "ibuprofen", "please", "do not", "how"
         ]
@@ -71,7 +71,7 @@ class LLMService:
         prompt = f"Detect the language of the following text and return ONLY the language name (e.g., 'Vietnamese', 'English', 'Spanish', 'French', 'German'):\n\n{text}"
 
         try:
-            # Short-circuit call for speed
+            # Gọi ngắn để tăng tốc độ
             result = await self._call_gemini(prompt, "Language Detection Task")
             return result.strip() if result else "English"
         except Exception as e:
@@ -79,10 +79,10 @@ class LLMService:
             return "English"
 
     async def _call_gemini(self, prompt: str, context: str) -> Optional[str]:
-        """Call Google Gemini API (v1beta) with the provided prompt and context.
+        """Gọi Google Gemini API (v1beta) với prompt và ngữ cảnh (context) được cung cấp.
 
-        Uses settings.GEMINI_MODEL (default: gemini-2.5-flash).
-        The official endpoint format:
+        Sử dụng settings.GEMINI_MODEL (mặc định: gemini-2.5-flash).
+        Định dạng endpoint chính thức:
           POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=API_KEY
         """
         ai_config = get_ai_settings()
@@ -106,7 +106,7 @@ class LLMService:
             f"[Gemini] Calling model={model}, prompt_len={len(prompt)}, context_len={len(context)}"
         )
 
-        # Build payload – system_instruction is supported from v1beta
+        # Xây dựng payload – system_instruction được hỗ trợ từ v1beta
         prompt_text = (
             f"KNOWLEDGE GRAPH CONTEXT (JSON):\n{context}\n\n"
             f"USER QUESTION: {prompt}"
@@ -143,7 +143,7 @@ class LLMService:
                     timeout=settings.LLM_TIMEOUT_SECONDS,
                 )
 
-                # ── Debug: always log HTTP status ──────────────────────────
+                # ── Debug: luôn ghi log trạng thái HTTP ──────────────────────────
                 logger.debug(f"[Gemini] HTTP status: {response.status_code}")
 
                 if response.status_code != 200:
@@ -159,7 +159,7 @@ class LLMService:
 
                 data = response.json()
 
-                # Check for prompt-level blocking (safety filters, etc.)
+                # Kiểm tra việc chặn ở cấp độ prompt (bộ lọc an toàn, v.v.)
                 if data.get("promptFeedback", {}).get("blockReason"):
                     block_reason = data["promptFeedback"]["blockReason"]
                     logger.warning(f"[Gemini] Prompt blocked – reason: {block_reason}")
@@ -170,7 +170,7 @@ class LLMService:
                     logger.error(f"[Gemini] Response has no candidates: {data}")
                     return None
 
-                # Handle finish reasons other than STOP
+                # Xử lý các lý do kết thúc khác ngoài STOP
                 finish_reason = candidates[0].get("finishReason", "STOP")
                 if finish_reason not in ("STOP", "MAX_TOKENS"):
                     logger.warning(
@@ -201,7 +201,7 @@ class LLMService:
                 return None
 
     def _get_fallback_messages_by_language(self, language: str) -> Dict[str, str]:
-        """Get fallback messages for different languages."""
+        """Lấy tin nhắn dự phòng cho các ngôn ngữ khác nhau."""
         fallbacks = {
             "vietnamese": {
                 "no_context": "Rất tiếc, tôi hiện không thể kết nối với dịch vụ trí tuệ nhân tạo và không tìm thấy thông tin cụ thể trong cơ sở dữ liệu nội bộ. Vui lòng thử lại sau hoặc hỏi bác sĩ của bạn.",
@@ -235,7 +235,7 @@ class LLMService:
             }
         }
         
-        # Normalize language name
+        # Chuẩn hóa tên ngôn ngữ
         lang_key = language.lower() if language else "english"
         if lang_key not in fallbacks:
             lang_key = "english"
@@ -243,20 +243,20 @@ class LLMService:
         return fallbacks[lang_key]
 
     def _get_safe_fallback_answer(self, context: str, language: str = "english") -> str:
-        """Fallback answer if Gemini fails, in the user's language."""
+        """Câu trả lời dự phòng nếu Gemini lỗi, bằng ngôn ngữ của người dùng."""
         messages = self._get_fallback_messages_by_language(language)
         
         if not context:
             return f"{messages['no_context']}\n\n{messages['disclaimer']}"
 
-        # Attempt to format raw JSON context into human readable markdown
+        # Thử định dạng ngữ cảnh JSON thô thành định dạng markdown dễ đọc hơn
         formatted_context = ""
         try:
             import json
-            # Context might have multiple JSON blocks separated by WIKIPEDIA_CONTEXT:
+            # Ngữ cảnh có thể có nhiều khối JSON được phân tách bằng WIKIPEDIA_CONTEXT:
             parts = context.split("WIKIPEDIA_CONTEXT:")
             
-            # Format Neo4j
+            # Định dạng Neo4j
             if parts[0].strip():
                 try:
                     neo4j_data = json.loads(parts[0].strip())
@@ -271,7 +271,7 @@ class LLMService:
                 except:
                     pass
 
-            # Format Wikipedia
+            # Định dạng Wikipedia
             if len(parts) > 1 and parts[1].strip():
                 try:
                     wiki_data = json.loads(parts[1].strip())
@@ -294,9 +294,14 @@ class LLMService:
 
     async def generate_response(self, prompt: str, context: str, language: str = "english") -> str:
         """
-        Generate response using Gemini with retries and fallback logic.
-        Language parameter ensures fallback messages are in the correct language.
+        Tạo câu trả lời sử dụng Gemini với cơ chế thử lại và logic dự phòng.
+        Tham số ngôn ngữ đảm bảo các thông báo dự phòng hiển thị đúng ngôn ngữ.
         """
+        ai_config = get_ai_settings()
+        if not ai_config.get("api_key"):
+            logger.warning("GEMINI_API_KEY is not configured – returning fallback immediately")
+            return self._get_safe_fallback_answer(context, language)
+
         max_retries = settings.LLM_MAX_RETRIES
         response = None
 
@@ -306,10 +311,10 @@ class LLMService:
                 if response:
                     break
 
-                logger.warning(f"Attempt {attempt + 1} failed for Gemini, retrying...")
-                await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
+                logger.warning(f"Lần thử {attempt + 1} thất bại cho Gemini, đang thử lại...")
+                await asyncio.sleep(1 * (attempt + 1))  # Giãn cách lũy thừa (Exponential backoff)
             except Exception as e:
-                logger.error(f"Error in generate_response attempt {attempt + 1}: {e}")
+                logger.error(f"Lỗi trong lần thử generate_response {attempt + 1}: {e}")
 
         if response:
             return response

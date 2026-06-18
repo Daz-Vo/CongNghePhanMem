@@ -15,7 +15,7 @@ def get_medicine_debug(
     current_user: Annotated[User, Depends(get_current_active_superuser)],
 ) -> Any:
     """
-    Debug endpoint to directly test Neo4j medicine retrieval.
+    Endpoint debug để trực tiếp kiểm tra việc truy xuất thông tin thuốc từ Neo4j.
     """
     logger.info(f"DEBUG REQ: Medicine name = '{name}'")
     from app.services.medicine_lookup_service import medicine_lookup_service
@@ -34,7 +34,7 @@ def get_disease_debug(
     current_user: Annotated[User, Depends(get_current_active_superuser)],
 ) -> Any:
     """
-    Debug endpoint to directly test Neo4j disease retrieval.
+    Endpoint debug để trực tiếp kiểm tra việc truy xuất thông tin bệnh từ Neo4j.
     """
     logger.info(f"DEBUG REQ: Disease name = '{name}'")
     from app.services.disease_lookup_service import disease_lookup_service

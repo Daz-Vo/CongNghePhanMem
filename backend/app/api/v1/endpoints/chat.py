@@ -16,8 +16,8 @@ async def ask_question(
     db: Annotated[Session, Depends(get_db)]
 ):
     """
-    Interact with the Medical Chatbot.
-    The response includes AI answer, detected entities, sources, and safety warnings.
+    Tương tác với Trợ lý ảo Y tế (Medical Chatbot).
+    Câu trả lời bao gồm phản hồi từ AI, các thực thể được phát hiện, nguồn tham khảo và các cảnh báo an toàn.
     """
     user_id = current_user.id if current_user else None
     return await chat_service.process_chat(db, user_id, request.message)
@@ -29,7 +29,7 @@ def get_chat_history(
     limit: int = 20
 ):
     """
-    Retrieve the current user's chat history.
+    Lấy lịch sử chat của người dùng hiện tại.
     """
     history = chat_service.get_user_history(db, current_user.id, limit=limit)
     total = chat_service.get_chat_logs_count(db, user_id=current_user.id)
@@ -42,7 +42,7 @@ def get_chat_detail(
     db: Annotated[Session, Depends(get_db)]
 ):
     """
-    Retrieve a specific chat history entry.
+    Lấy thông tin chi tiết một lượt chat cụ thể từ lịch sử.
     """
     from fastapi import HTTPException
     chat = chat_service.get_chat_detail(db, id, current_user.id)

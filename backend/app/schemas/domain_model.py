@@ -1,10 +1,10 @@
-"""Neo4j Domain Models schemas for API responses."""
+"""Các schema mô hình miền (Domain Models) Neo4j cho các phản hồi API."""
 
 from typing import Optional
 from pydantic import BaseModel
 
 
-# ============ Drug Schema ============
+# ============ Schema cho Thuốc (Drug) ============
 class DrugBase(BaseModel):
     name: str
     brand_name: Optional[str] = None
@@ -23,7 +23,7 @@ class DrugRead(DrugBase):
         from_attributes = True
 
 
-# ============ Disease Schema ============
+# ============ Schema cho Bệnh (Disease) ============
 class DiseaseBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -41,9 +41,9 @@ class DiseaseRead(DiseaseBase):
         from_attributes = True
 
 
-# ============ Interaction/Relationship Schema ============
+# ============ Schema cho Mối quan hệ/Tương tác ============
 class DrugInteraction(BaseModel):
-    """Represent a TREATS relationship between Drug and Disease."""
+    """Đại diện cho mối quan hệ ĐIỀU TRỊ (TREATS) giữa Thuốc và Bệnh lý."""
     drug_name: str
     disease_name: str
     confidence: Optional[float] = None

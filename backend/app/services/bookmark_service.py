@@ -5,7 +5,7 @@ from app.schemas.bookmark import BookmarkCreate, BookmarkResponse, BookmarkList
 
 class BookmarkService:
     def add_bookmark(self, db: Session, user_id: int, bookmark_in: BookmarkCreate) -> BookmarkResponse:
-        # Check if already bookmarked
+        # Kiểm tra xem đã được bookmark chưa
         existing = bookmark_repository.get_bookmark_by_item(
             db, user_id, bookmark_in.item_type, bookmark_in.item_neo4j_id
         )

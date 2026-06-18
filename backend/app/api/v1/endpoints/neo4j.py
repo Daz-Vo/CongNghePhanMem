@@ -16,12 +16,12 @@ def test_neo4j_connection():
         if not result:
             raise Exception("connectivity check failed")
 
-        # Ensure a simple Test node exists and return it
+        # Đảm bảo nút Test đơn giản tồn tại và trả về nút đó
         try:
             repo = neo4j_service._repository
-            # ensure driver exists
+            # đảm bảo trình điều khiển (driver) tồn tại
             repo._ensure_driver()
-            # use a session directly to perform write/read
+            # sử dụng phiên làm việc (session) trực tiếp để thực hiện ghi/đọc
             with repo._driver.session() as session:
                 session.run("MERGE (t:Test {name: $name})", name="hello")
                 result = session.run(
@@ -39,12 +39,12 @@ def test_neo4j_connection():
 
 @router.get("/stats")
 def get_neo4j_stats():
-    """Get statistics about Neo4j data."""
+    """Lấy thông tin thống kê về dữ liệu Neo4j."""
     stats = neo4j_service.get_graph_stats()
     return stats
 
 
 @router.get("/graph", response_model=GraphResponse)
 def get_graph_data(limit: int = Query(100, ge=1, le=1000)):
-    """Get all nodes and relationships for graph visualization."""
+    """Lấy tất cả các nút và mối quan hệ phục vụ cho trực quan hóa đồ thị."""
     return neo4j_service.get_graph_data(limit=limit)

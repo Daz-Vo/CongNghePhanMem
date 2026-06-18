@@ -1,5 +1,5 @@
 """
-Users endpoints: profile, settings, etc.
+Các endpoint người dùng: hồ sơ, cài đặt, v.v.
 """
 
 import logging
@@ -23,7 +23,7 @@ def read_current_user(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
     """
-    Get current user profile.
+    Lấy thông tin hồ sơ của người dùng hiện tại.
     """
     logger.info(f"GET /users/me - user_id={current_user.id}, email={current_user.email}")
     return current_user
@@ -36,7 +36,7 @@ def read_user(
     current_user: Annotated[User, Depends(get_current_user)] = None,
 ) -> User:
     """
-    Get user by ID (admin only for now).
+    Lấy thông tin người dùng theo ID (hiện tại chỉ dành cho admin).
     """
     if current_user.id != user_id:
         raise HTTPException(
@@ -59,7 +59,7 @@ def update_current_user(
     current_user: Annotated[User, Depends(get_current_user)] = None,
 ) -> User:
     """
-    Update current user profile.
+    Cập nhật thông tin hồ sơ của người dùng hiện tại.
     """
     logger.info(f"PUT /users/me - user_id={current_user.id}")
     
@@ -77,7 +77,7 @@ def update_current_user(
 
 @router.post("/signup", response_model=UserRead, status_code=201)
 def signup(user_in: UserCreate, db: Session = Depends(get_db)):
-    """Compatibility endpoint for frontend: /users/signup"""
+    """Endpoint tương thích cho frontend: /users/signup"""
     existing = user_repository.get_user_by_email(db, email=user_in.email)
     if existing:
         raise HTTPException(

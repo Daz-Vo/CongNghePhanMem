@@ -1,5 +1,5 @@
 """
-Drug API schemas.
+API Schemas cho Thuốc (Drug).
 """
 
 from pydantic import BaseModel, Field
@@ -7,35 +7,35 @@ from typing import Optional
 
 
 class DrugSearchRequest(BaseModel):
-    """Drug search request."""
+    """Yêu cầu tìm kiếm thuốc."""
 
     query: str = Field(..., min_length=1, max_length=255)
     limit: int = Field(10, ge=1, le=100)
 
 
 class DrugIngredient(BaseModel):
-    """Ingredient in drug."""
+    """Thành phần trong thuốc."""
 
     name: str
     description: Optional[str] = None
 
 
 class DrugManufacturer(BaseModel):
-    """Manufacturer info."""
+    """Thông tin nhà sản xuất."""
 
     name: str
     country: Optional[str] = None
 
 
 class DrugInteraction(BaseModel):
-    """Drug interaction."""
+    """Tương tác thuốc."""
 
     name: str
     severity: str
 
 
 class DrugResponse(BaseModel):
-    """Drug response model."""
+    """Mô hình phản hồi thông tin thuốc."""
 
     id: Optional[str] = None
     name: str
@@ -47,7 +47,7 @@ class DrugResponse(BaseModel):
 
 
 class DrugDetailResponse(DrugResponse):
-    """Drug detail with relationships."""
+    """Thông tin chi tiết thuốc cùng với các mối quan hệ."""
 
     ingredients: list[DrugIngredient] = Field(default_factory=list)
     manufacturers: list[DrugManufacturer] = Field(default_factory=list)
@@ -56,7 +56,7 @@ class DrugDetailResponse(DrugResponse):
 
 
 class DrugSearchResponse(BaseModel):
-    """Drug search response."""
+    """Phản hồi tìm kiếm thuốc."""
 
     total: int
     limit: int
@@ -64,7 +64,7 @@ class DrugSearchResponse(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """Error response."""
+    """Phản hồi lỗi."""
 
     detail: str
     status_code: int
