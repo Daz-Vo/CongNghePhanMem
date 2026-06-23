@@ -7,14 +7,14 @@ from app.core.config import settings
 
 client = TestClient(app)
 
-@patch("app.services.drug_lookup_service.drug_lookup_service.search_drugs")
+@patch("app.services.medicine_lookup_service.medicine_lookup_service.search_medicines")
 def test_search_drugs_pagination(mock_search, superuser_token_headers):
     """Test drug search pagination validation."""
     mock_search.return_value = {"total": 0, "limit": 10, "items": []}
     
     # Test valid
     response = client.get(
-        f"{settings.API_V1_STR}/drugs/search?q=aspirin&limit=20&skip=5",
+        f"{settings.API_V1_STR}/medicines/search?q=aspirin&limit=20&skip=5",
         headers=superuser_token_headers
     )
     assert response.status_code == 200
@@ -22,7 +22,7 @@ def test_search_drugs_pagination(mock_search, superuser_token_headers):
 
     # Test invalid limit
     response = client.get(
-        f"{settings.API_V1_STR}/drugs/search?q=aspirin&limit=101",
+        f"{settings.API_V1_STR}/medicines/search?q=aspirin&limit=101",
         headers=superuser_token_headers
     )
     assert response.status_code == 422

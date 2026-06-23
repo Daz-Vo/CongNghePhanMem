@@ -94,19 +94,7 @@ class DiseaseRepository:
             )
             return []
 
-    def get_disease_count(self) -> int:
-        """
-        Lấy tổng số lượng bệnh lý trong cơ sở dữ liệu.
-        """
-        query = "MATCH (d:Disease) RETURN COUNT(d) AS count"
-        try:
-            results = self._repository.execute_read(query)
-            if results:
-                return results[0].get("count", 0)
-            return 0
-        except Exception as exc:
-            logger.error(f"Error counting diseases: {exc}")
-            return 0
+
 
     def create_disease(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Tạo một nút bệnh lý mới."""
