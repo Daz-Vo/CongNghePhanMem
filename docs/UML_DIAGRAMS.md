@@ -395,14 +395,23 @@ skinparam classAttributeIconSize 0
 
 class "Drug (Thuốc)" as Drug #e1f5ff {
   + name: String
-  + description: String
-  + fda_id: String
+  + brand_name: String
+  + generic_name: String
+  + purpose: String
+  + dosage: String
+  + indications: String
+  + warnings: String
+  + contraindications: String
+  + adverse_reactions: String
+  + manufacturer: String
 }
 
 class "Disease (Bệnh lý)" as Disease #fff3e0 {
   + name: String
   + description: String
   + icd_code: String
+  + category: String
+  + severity: String
 }
 
 class "Symptom (Triệu chứng)" as Symptom #f3e5f5 {

@@ -45,7 +45,7 @@ medical-chatbot/
 │       ├── pages/            # Các trang cụ thể (AiChat, MedicineSearch, AdminDashboard, Login...)
 │       └── utils/            # Các hàm tiện ích hỗ trợ
 ├── docs/                     # Thư mục lưu trữ tài liệu phân tích thiết kế, Sơ đồ UML
-├── docker-compose.yml        # Tệp cấu hình khởi chạy toàn bộ 4 컨테이너 (FE, BE, Postgres, Neo4j)
+├── docker-compose.yml        # Tệp cấu hình khởi chạy toàn bộ 4 container (FE, BE, Postgres, Neo4j)
 ├── .env.example              # File mẫu chứa các biến môi trường
 └── README.md                 # Tài liệu hướng dẫn cài đặt và sử dụng (Chính là file này)
 ```
@@ -75,6 +75,8 @@ cp .env.example .env
 * `SECRET_KEY`: Khóa bí mật cho JWT và bảo mật (Nên thay đổi).
 * `FIRST_SUPERUSER`: Email tài khoản quản trị mặc định.
 * `FIRST_SUPERUSER_PASSWORD`: Mật khẩu tài khoản quản trị mặc định.
+* `FIRST_USER`: Email tài khoản thông thường mặc định.
+* `FIRST_USER_PASSWORD`: Mật khẩu tài khoản thông thường mặc định.
 
 **Emails (SMTP / Gửi link quên mật khẩu):**
 
@@ -171,7 +173,7 @@ python app/initial_data.py
 
 Sau khi dự án chạy thành công, bạn có thể truy cập các dịch vụ qua các địa chỉ sau:
 
-* **Frontend:** `http://localhost:3000`
+* **Frontend:** `http://localhost:5173`
 * **Backend API (Docs):** `http://localhost:8000/docs`
 * **Kiểm tra sức khỏe Backend:** `http://localhost:8000/health`
 * **Neo4j Browser:** `http://localhost:7474`
@@ -199,12 +201,224 @@ cd frontend
 bun install   # Hoặc npm install nếu bạn không dùng bun
 ```
 
-## Tài liệu liên quan
-
-* Backend: [backend/README.md](https://www.google.com/search?q=./backend/README.md)
-* Frontend: [frontend/README.md](https://www.google.com/search?q=./frontend/README.md)
-* Docker Compose: [compose.yml](https://www.google.com/search?q=./compose.yml)
-
 ## License
 
 Dự án này sử dụng giấy phép MIT.
+
+---
+
+## Hướng dẫn Backend (FastAPI Project - Backend)
+
+## Yêu cầu
+
+* Python 3.10 trở lên
+* [pip](https://pip.pypa.io/) (đi kèm với Python)
+* [Docker](https://www.docker.com/) (tùy chọn, dành cho Docker Compose)
+
+## Docker Compose
+
+Khởi động môi trường phát triển cục bộ với Docker Compose theo hướng dẫn ở các phần trên.
+
+## Quy trình làm việc chung
+
+### Cài đặt (Lần đầu)
+
+1. **Di chuyển vào thư mục backend:**
+   ```console
+   $ cd backend
+   ```
+
+2. **Tạo môi trường ảo Python:**
+   
+   **Windows:**
+   ```console
+   $ python -m venv .venv
+   $ .venv\Scripts\activate
+   ```
+   
+   **Linux/macOS:**
+   ```console
+   $ python3 -m venv .venv
+   $ source .venv/bin/activate
+   ```
+
+3. **Cài đặt các thư viện phụ thuộc:**
+   ```console
+   $ pip install -r ../requirements.txt
+   ```
+
+4. **Cấu hình biến môi trường:**
+   ```console
+   $ cp ../.env.example .env  # Và cập nhật các cấu hình của bạn
+   ```
+
+### Phát triển
+
+Đảm bảo trình soạn thảo (editor) của bạn đang sử dụng đúng môi trường ảo Python, với đường dẫn interpreter là `backend/.venv/bin/python`.
+
+Chỉnh sửa hoặc thêm các model SQLModel cho dữ liệu và bảng SQL trong `./backend/app/models.py`, các API endpoint trong `./backend/app/api/`, và các tiện ích CRUD (Create, Read, Update, Delete) trong `./backend/app/crud.py`.
+
+### Chạy server
+
+```console
+$ source .venv/bin/activate  # (hoặc .venv\Scripts\activate trên Windows)
+$ fastapi run app/main.py --reload
+```
+
+API sẽ chạy tại địa chỉ `http://localhost:8000` với tài liệu Swagger (docs) tại `/docs`.
+
+## VS Code
+
+Đã có sẵn cấu hình để chạy backend thông qua trình gỡ lỗi (debugger) của VS Code, nhờ đó bạn có thể sử dụng breakpoint, tạm dừng và kiểm tra biến, v.v.
+
+Cấu hình cũng đã sẵn sàng để bạn có thể chạy test thông qua tab Python tests của VS Code.
+
+## Tùy chỉnh Docker Compose (Override)
+
+Trong quá trình phát triển, bạn có thể thay đổi các cài đặt Docker Compose mà chỉ ảnh hưởng đến môi trường phát triển cục bộ thông qua file `compose.override.yml`.
+
+Sự thay đổi ở file này không ảnh hưởng đến môi trường production. Do đó, bạn có thể thêm các thay đổi "tạm thời" để hỗ trợ luồng phát triển.
+
+Ví dụ, thư mục chứa code backend được đồng bộ hóa vào trong Docker container, copy trực tiếp code bạn đang sửa vào thư mục bên trong container. Điều đó cho phép bạn test các thay đổi ngay lập tức mà không cần build lại Docker image. Việc này chỉ nên làm khi development, còn trên production, bạn nên build image với phiên bản code mới nhất.
+
+Có một lệnh ghi đè chạy `fastapi run --reload` thay vì `fastapi run` mặc định. Nó khởi động một tiến trình server duy nhất và tự động reload lại mỗi khi code thay đổi. Lưu ý nếu bạn lưu file Python có lỗi cú pháp, nó sẽ bị crash và dừng container. Sau đó bạn có thể khởi động lại bằng lệnh:
+
+```console
+$ docker compose watch
+```
+
+## Kiểm thử Backend (Tests)
+
+Để chạy test backend:
+
+```console
+$ bash ./scripts/test.sh
+```
+
+Test được chạy bằng Pytest, bạn có thể chỉnh sửa và thêm test ở `./backend/tests/`.
+
+### Chạy test khi stack đang mở
+
+Nếu stack (Docker) của bạn đang chạy và bạn chỉ muốn chạy test, bạn có thể dùng:
+
+```bash
+docker compose exec backend bash scripts/tests-start.sh
+```
+
+Kịch bản này gọi `pytest` sau khi đảm bảo các phần khác của stack đang chạy. Để dừng ở lỗi đầu tiên:
+
+```bash
+docker compose exec backend bash scripts/tests-start.sh -x
+```
+
+### Độ bao phủ (Test Coverage)
+
+Khi test chạy xong, file `htmlcov/index.html` sẽ được tạo ra, bạn có thể mở nó trên trình duyệt để xem độ phủ (coverage) của test.
+
+## Migrations (Di chuyển CSDL)
+
+Vì trong lúc development thư mục app của bạn được mount thành volume trong container, bạn có thể chạy các lệnh `alembic` bên trong container và code migration sẽ xuất hiện ở thư mục gốc của bạn.
+
+* Mở terminal tương tác trong container backend:
+
+```console
+$ docker compose exec backend bash
+```
+
+* Tạo bản revision mới sau khi thay đổi model (ví dụ thêm cột):
+
+```console
+$ alembic revision --autogenerate -m "Add column last_name to User model"
+```
+
+* Cập nhật database:
+
+```console
+$ alembic upgrade head
+```
+
+## Mẫu Email (Email Templates)
+
+Các mẫu email nằm trong `./backend/app/email-templates/`. Cần cài đặt extension [MJML](https://github.com/mjmlio/vscode-mjml) trong VS Code. Sau khi tạo file `.mjml` trong thư mục `src`, dùng lệnh `MJML: Export to HTML` để xuất ra HTML lưu vào thư mục `build`.
+
+---
+
+## Hướng dẫn Frontend (FastAPI Project - Frontend)
+
+Frontend được xây dựng bằng [Vite](https://vitejs.dev/), [React](https://reactjs.org/), [TypeScript](https://www.typescriptlang.org/), [TanStack Query](https://tanstack.com/query), [TanStack Router](https://tanstack.com/router) và [Tailwind CSS](https://tailwindcss.com/).
+
+## Yêu cầu
+
+- [Bun](https://bun.sh/) (khuyên dùng) hoặc [Node.js](https://nodejs.org/)
+
+## Khởi động nhanh
+
+```bash
+bun install
+bun run dev
+```
+
+* Sau đó mở trình duyệt tại địa chỉ http://localhost:5173/.
+
+Lưu ý rằng live server này không chạy trong Docker, nó dành cho môi trường phát triển cục bộ và đây là quy trình được khuyên dùng. 
+
+### Xóa bỏ frontend
+
+Nếu bạn chỉ muốn phát triển ứng dụng API-only và muốn xóa frontend:
+* Xóa thư mục `./frontend`.
+* Xóa service `frontend` trong `compose.yml` và `compose.override.yml`.
+
+## Tạo Client (Generate Client)
+
+### Tự động
+
+* Kích hoạt môi trường ảo của backend.
+* Từ thư mục gốc của project, chạy script:
+
+```bash
+bash ./scripts/generate-client.sh
+```
+
+### Thủ công
+
+* Khởi động Docker Compose stack.
+* Tải file OpenAPI JSON từ `http://localhost/api/v1/openapi.json` và lưu thành file `openapi.json` ở thư mục gốc của `frontend`.
+* Chạy lệnh tạo client:
+
+```bash
+bun run generate-client
+```
+
+Lưu ý: Mỗi khi backend thay đổi schema OpenAPI, bạn cần làm lại các bước này.
+
+## Sử dụng API từ xa
+
+Bạn có thể cấu hình biến môi trường `VITE_API_URL` để trỏ tới URL của API từ xa trong file `frontend/.env`:
+
+```env
+VITE_API_URL=https://api.my-domain.example.com
+```
+
+## Cấu trúc Code
+
+* `frontend/src` - Mã nguồn chính của frontend.
+* `frontend/src/assets` - Tài nguyên tĩnh (ảnh, icon...).
+* `frontend/src/client` - OpenAPI client được tự động tạo.
+* `frontend/src/components` - Các component dùng chung.
+* `frontend/src/hooks` - Các custom hooks.
+* `frontend/src/routes` - Định tuyến (routes) và các trang (pages).
+
+## Kiểm thử End-to-End với Playwright
+
+Để chạy test E2E:
+
+```bash
+docker compose up -d --wait backend
+bunx playwright test
+```
+
+Hoặc chạy với giao diện UI:
+
+```bash
+bunx playwright test --ui
+```

@@ -97,6 +97,9 @@ class Settings(BaseSettings):
 
     FIRST_SUPERUSER: EmailStr = "admin@example.com" # Tài khoản quản trị viên tối cao đầu tiên
     FIRST_SUPERUSER_PASSWORD: str = "changethis" # Mật khẩu mặc định của tài khoản quản trị viên đầu tiên
+    
+    FIRST_USER: EmailStr = "user@example.com" # Tài khoản người dùng mặc định đầu tiên
+    FIRST_USER_PASSWORD: str = "user1234" # Mật khẩu mặc định của tài khoản người dùng đầu tiên
 
     # Cấu hình cơ sở dữ liệu đồ thị Neo4j
     NEO4J_URI: str = "" # Đường dẫn kết nối tới Neo4j (ví dụ: bolt://localhost:7687)
@@ -142,6 +145,9 @@ class Settings(BaseSettings):
         self._check_default_secret("NEO4J_PASSWORD", self.NEO4J_PASSWORD)
         self._check_default_secret(
             "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
+        )
+        self._check_default_secret(
+            "FIRST_USER_PASSWORD", self.FIRST_USER_PASSWORD
         )
         return self
 

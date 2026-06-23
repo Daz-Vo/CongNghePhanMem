@@ -30,7 +30,7 @@ class MedicineRepository:
             m.name AS name,
             m.brand_name AS brand_name,
             m.generic_name AS generic_name,
-            m.manufacturer AS manufacturer,
+            coalesce(m.manufacturer, [(m)-[:MADE_BY]->(man:Manufacturer) | man.name][0]) AS manufacturer,
             m.purpose AS purpose,
             m.indications AS indications,
             m.warnings AS warnings,
@@ -69,10 +69,11 @@ class MedicineRepository:
             m.name AS name,
             m.brand_name AS brand_name,
             m.generic_name AS generic_name,
-            m.manufacturer AS manufacturer,
+            coalesce(m.manufacturer, [(m)-[:MADE_BY]->(man:Manufacturer) | man.name][0]) AS manufacturer,
             m.purpose AS purpose,
             m.indications AS indications,
             m.dosage AS dosage
+        ORDER BY m.name ASC
         SKIP $skip
         LIMIT $limit
         """

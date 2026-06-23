@@ -301,6 +301,8 @@ sequenceDiagram
          d.name AS name,
          d.description AS description,
          d.icd_code AS icd_code,
+         d.category AS category,
+         d.severity AS severity,
          d.updated_at AS updated_at,
          collect(DISTINCT m.name) AS treating_medicines,
          collect(DISTINCT {name: s.name, description: s.description}) AS symptoms

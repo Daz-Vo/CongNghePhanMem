@@ -1,6 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { AdminService, MedicinesService } from '../client';
 
+const Modal = ({ title, onClose, children }) => (
+  <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="bg-card rounded-2xl shadow-xl border border-border w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center justify-between p-6 border-b border-border">
+        <h2 className="text-lg font-heading font-semibold text-foreground">{title}</h2>
+        <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+          <iconify-icon icon="lucide:x" class="text-xl"></iconify-icon>
+        </button>
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  </div>
+);
+
+const Field = ({ label, value }) => (
+  <div className="py-3 border-b border-border last:border-0">
+    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">{label}</p>
+    <p className="text-sm text-foreground">{value || '—'}</p>
+  </div>
+);
+
+const FormField = ({ label, name, value, onChange, type = 'text', as }) => (
+  <div className="mb-4">
+    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{label}</label>
+    {as === 'textarea' ? (
+      <textarea name={name} value={value} onChange={onChange} rows={3} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none" />
+    ) : (
+      <input type={type} name={name} value={value} onChange={onChange} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+    )}
+  </div>
+);
+
 const AdminMedicines = () => {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,37 +136,7 @@ const AdminMedicines = () => {
     }
   };
 
-  const Modal = ({ title, onClose, children }) => (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl shadow-xl border border-border w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-lg font-heading font-semibold text-foreground">{title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <iconify-icon icon="lucide:x" class="text-xl"></iconify-icon>
-          </button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </div>
-  );
 
-  const Field = ({ label, value }) => (
-    <div className="py-3 border-b border-border last:border-0">
-      <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">{label}</p>
-      <p className="text-sm text-foreground">{value || '—'}</p>
-    </div>
-  );
-
-  const FormField = ({ label, name, value, onChange, type = 'text', as }) => (
-    <div className="mb-4">
-      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{label}</label>
-      {as === 'textarea' ? (
-        <textarea name={name} value={value} onChange={onChange} rows={3} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none" />
-      ) : (
-        <input type={type} name={name} value={value} onChange={onChange} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
-      )}
-    </div>
-  );
 
   return (
     <>

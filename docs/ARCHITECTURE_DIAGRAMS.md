@@ -257,7 +257,9 @@ Nodes:
   │
   ├─ Disease
   │  ├── name
-  │  └── description
+  │  ├── description
+  │  ├── category
+  │  └── severity
   │
   └─ Test (for health checks)
 
@@ -506,7 +508,7 @@ REQUEST: GET /api/v1/users/me
 ```
 ┌──────────────┐
 │  Frontend    │ (React)
-│  Port 3000   │
+│  Port 5173   │
 └──────┬───────┘
        │ HTTP/JSON
        ▼

@@ -32,6 +32,8 @@ class DiseaseLookupService:
                 DiseaseResponse(
                     name=disease.get("name", ""),
                     description=disease.get("description"),
+                    category=disease.get("category"),
+                    severity=disease.get("severity"),
                 )
                 for disease in results
             ]
@@ -66,8 +68,10 @@ class DiseaseLookupService:
             detail = DiseaseDetailResponse(
                 name=disease.get("name", ""),
                 description=disease.get("description"),
+                category=disease.get("category"),
+                severity=disease.get("severity"),
                 symptoms=symptoms,
-                treating_medicines=disease.get("treating_medicines") or []
+                treatments=disease.get("treating_medicines") or []
             )
 
             logger.info(f"Successfully fetched details for disease '{disease_name}'")

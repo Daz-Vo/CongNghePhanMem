@@ -17,16 +17,24 @@ Neo4j là một cơ sở dữ liệu đồ thị (Graph Database) được sử 
 **Mô tả**: Lưu thông tin về các loại thuốc.
 
 **Properties**:
-- `name` (String): Tên thuốc (Primary Key)
-- `description` (String): Mô tả chi tiết thuốc
-- `fda_id` (String): ID từ FDA nếu có
+- `name` (String): Tên chung/Tên định danh (Primary Key)
+- `brand_name` (String): Tên thương mại
+- `generic_name` (String): Tên gốc
+- `purpose` (String): Mục đích/Công dụng
+- `dosage` (String): Liều lượng
+- `indications` (String): Chỉ định
+- `warnings` (String): Cảnh báo
+- `contraindications` (String): Chống chỉ định
+- `adverse_reactions` (String): Phản ứng có hại
+- `manufacturer` (String): Nhà sản xuất
 
 **Ví dụ**:
 ```
 Drug {
   name: "Aspirin",
-  description: "Thuốc giảm đau, hạ sốt",
-  fda_id: "FDA001"
+  brand_name: "Bayer Aspirin",
+  purpose: "Thuốc giảm đau, hạ sốt",
+  dosage: "500mg/ngày"
 }
 ```
 
@@ -37,13 +45,17 @@ Drug {
 - `name` (String): Tên bệnh (Primary Key)
 - `description` (String): Mô tả chi tiết bệnh
 - `icd_code` (String): Mã ICD-10 nếu có
+- `category` (String): Thể loại bệnh
+- `severity` (String): Mức độ nghiêm trọng
 
 **Ví dụ**:
 ```
 Disease {
   name: "Headache",
   description: "Đau đầu",
-  icd_code: "G89.29"
+  icd_code: "G89.29",
+  category: "Thần kinh",
+  severity: "Nhẹ"
 }
 ```
 

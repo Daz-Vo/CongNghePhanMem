@@ -1,16 +1,10 @@
 import React from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import SidebarAdmin from '../components/SidebarAdmin';
 import { useUser } from '../context/UserContext';
 
 const AdminLayout = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useUser();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const { user } = useUser();
 
   const displayName = user?.full_name || user?.email?.split('@')[0] || 'Admin';
   const avatarLetter = displayName.charAt(0).toUpperCase();
@@ -28,15 +22,8 @@ const AdminLayout = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            >
-              <iconify-icon icon="lucide:log-out"></iconify-icon>
-              <span className="hidden sm:inline">Log Out</span>
-            </button>
             <div
-              className="flex items-center gap-3 pl-3 border-l border-border text-left"
+              className="flex items-center gap-3 text-left"
             >
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
                 {avatarLetter}
