@@ -22,3 +22,11 @@ def init_db(session: Session) -> None:
             password=settings.FIRST_SUPERUSER_PASSWORD,
         )
         create_user(session, user_in, is_superuser=True)
+        
+    existing_regular_user = get_user_by_email(session, settings.FIRST_USER)
+    if not existing_regular_user:
+        user_regular_in = UserCreate(
+            email=settings.FIRST_USER,
+            password=settings.FIRST_USER_PASSWORD,
+        )
+        create_user(session, user_regular_in, is_superuser=False)

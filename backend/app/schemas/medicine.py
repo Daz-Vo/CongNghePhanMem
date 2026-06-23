@@ -35,6 +35,9 @@ class MedicineSummary(BaseModel):
     brand_name: Optional[str] = None
     generic_name: Optional[str] = None
     dosage: Optional[str] = None
+    manufacturer: Optional[str] = None
+    purpose: Optional[str] = None
+    indications: Optional[str] = None
 
 class MedicineDetailResponse(MedicineBase):
     updated_at: Optional[datetime] = None
