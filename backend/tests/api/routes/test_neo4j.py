@@ -7,19 +7,24 @@ from app.core.config import settings
 
 def test_search_drugs_route_returns_items(client: TestClient) -> None:
     with patch(
-        "app.api.v1.endpoints.neo4j.neo4j_service.search_drugs",
-        return_value=[
-            {
-                "id": 1,
-                "name": "Aspirin",
-                "generic_name": "Acetylsalicylic Acid",
-                "purpose": "Pain relief",
-            }
-        ],
+        "app.api.v1.endpoints.medicines.medicine_lookup_service.search_medicines",
+        return_value={
+            "query": "aspirin",
+            "limit": 5,
+            "skip": 0,
+            "total": 1,
+            "items": [
+                {
+                    "name": "Aspirin",
+                    "generic_name": "Acetylsalicylic Acid",
+                    "purpose": "Pain relief",
+                }
+            ]
+        },
     ):
         response = client.get(
-            f"{settings.API_V1_STR}/neo4j/drugs/search",
-            params={"query": "aspirin", "limit": 5},
+            f"{settings.API_V1_STR}/medicines/search",
+            params={"q": "aspirin", "limit": 5},
         )
     assert response.status_code == 200
     payload = response.json()
@@ -29,28 +34,32 @@ def test_search_drugs_route_returns_items(client: TestClient) -> None:
 
 def test_get_drug_detail_route_returns_404_when_missing(client: TestClient) -> None:
     with patch(
-        "app.api.v1.endpoints.neo4j.neo4j_service.get_drug_detail",
+        "app.api.v1.endpoints.medicines.medicine_lookup_service.get_medicine_detail",
         return_value=None,
     ):
-        response = client.get(f"{settings.API_V1_STR}/neo4j/drugs/UnknownDrug")
+        response = client.get(f"{settings.API_V1_STR}/medicines/UnknownDrug/detail")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Drug not found"
+    assert response.json()["detail"] == "Medicine 'UnknownDrug' not found"
 
 
 def test_check_interactions_route_returns_results(client: TestClient) -> None:
+    from app.schemas.interaction import InteractionCheckResponse, InteractionResult
     with patch(
-        "app.api.v1.endpoints.neo4j.neo4j_service.check_drug_interactions",
-        return_value=[
-            {
-                "drug_1": "Aspirin",
-                "drug_2": "Ibuprofen",
-                "severity": "high",
-                "description": "Increased bleeding risk",
-            }
-        ],
+        "app.api.v1.endpoints.interactions.drug_interaction_service.check_multiple_interactions",
+        return_value=InteractionCheckResponse(
+            results=[
+                InteractionResult(
+                    drug_1="Aspirin",
+                    drug_2="Ibuprofen",
+                    has_interaction=True,
+                    severity="high",
+                    description="Increased bleeding risk",
+                )
+            ]
+        ),
     ):
         response = client.post(
-            f"{settings.API_V1_STR}/neo4j/interactions/check",
+            f"{settings.API_V1_STR}/interactions/check",
             json={"drug_names": ["Aspirin", "Ibuprofen"]},
         )
     assert response.status_code == 200

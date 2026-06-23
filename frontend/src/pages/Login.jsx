@@ -26,18 +26,20 @@ const Login = () => {
       localStorage.setItem('access_token', response.access_token);
       // Fetch the user profile to determine redirect
       const userData = await fetchUser();
+      
       // Determine where to redirect
-      const from = location.state?.from?.pathname;
-      if (from && from !== '/login') {
-        navigate(from, { replace: true });
+      if (userData?.is_superuser) {
+        const from = location.state?.from?.pathname;
+        if (from && from.startsWith('/admin')) {
+          navigate(from, { replace: true });
+        } else {
+          navigate('/admin', { replace: true });
+        }
       } else {
-        // fetchUser updates context, we need to read from localStorage for redirect
-        // Get user info from API to decide redirect
-        try {
-          const { UsersService } = await import('../client');
-          const me = await UsersService.readCurrentUserApiV1UsersMeGet();
-          navigate(me.is_superuser ? '/admin' : '/app', { replace: true });
-        } catch {
+        const from = location.state?.from?.pathname;
+        if (from && from !== '/login' && !from.startsWith('/admin')) {
+          navigate(from, { replace: true });
+        } else {
           navigate('/app', { replace: true });
         }
       }

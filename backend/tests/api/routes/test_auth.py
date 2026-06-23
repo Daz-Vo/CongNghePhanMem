@@ -65,6 +65,7 @@ def test_reset_password_updates_user_password(client: TestClient, db: Session) -
     assert response.status_code == 200
     assert response.json()["message"] == "Password updated successfully"
 
+    db.expire_all()
     refreshed_user = get_user_by_email(db, email)
     assert refreshed_user is not None
     assert verify_password(new_password, refreshed_user.hashed_password)

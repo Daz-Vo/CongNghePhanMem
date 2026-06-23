@@ -181,19 +181,7 @@ class DrugRepository:
             logger.error(f"Error getting ingredients for drug '{drug_name}': {exc}")
             return []
 
-    def get_drug_count(self) -> int:
-        """
-        Lấy tổng số lượng thuốc trong cơ sở dữ liệu.
-        """
-        query = "MATCH (d:Drug) RETURN COUNT(d) AS count"
-        try:
-            results = self._repository.execute_read(query)
-            if results:
-                return results[0].get("count", 0)
-            return 0
-        except Exception as exc:
-            logger.error(f"Error counting drugs: {exc}")
-            return 0
+
 
 
 drug_repository = DrugRepository()

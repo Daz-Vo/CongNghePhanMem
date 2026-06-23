@@ -62,6 +62,9 @@ def admin_get_users(
     limit: int = 100,
     skip: int = 0
 ):
+    """
+    Chỉ dành cho Admin: Lấy danh sách toàn bộ người dùng trong hệ thống (hỗ trợ phân trang).
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     from app.repositories import user_repository
@@ -74,6 +77,9 @@ def admin_update_user_role(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)]
 ):
+    """
+    Chỉ dành cho Admin: Cập nhật vai trò/quyền quản trị viên (superuser) của người dùng theo ID.
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     from app.repositories import user_repository
@@ -89,6 +95,9 @@ def admin_update_user_status(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)]
 ):
+    """
+    Chỉ dành cho Admin: Cập nhật trạng thái hoạt động (kích hoạt hoặc vô hiệu hóa) của người dùng theo ID.
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     from app.repositories import user_repository
@@ -102,6 +111,9 @@ def admin_get_stats(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)]
 ):
+    """
+    Chỉ dành cho Admin: Lấy số liệu thống kê tổng hợp của hệ thống bao gồm: người dùng, đồ thị Neo4j, các thuốc tìm kiếm hàng đầu, và các chủ đề chat phổ biến.
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     from app.repositories import user_repository
@@ -154,6 +166,9 @@ def admin_get_ai_config(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)]
 ):
+    """
+    Chỉ dành cho Admin: Lấy thông tin cấu hình AI hiện tại (API key, model) và số lượng lượt sử dụng AI trong tháng.
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     from app.core.ai_settings_store import get_ai_settings
@@ -171,6 +186,9 @@ def admin_update_ai_config(
     config_in: AIConfigUpdate,
     current_user: Annotated[User, Depends(get_current_user)]
 ):
+    """
+    Chỉ dành cho Admin: Cập nhật cấu hình AI (API key, model, phiên bản hệ thống, v.v.).
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     from app.core.ai_settings_store import save_ai_settings
@@ -187,6 +205,9 @@ async def admin_get_ai_models(
     current_user: Annotated[User, Depends(get_current_user)],
     api_key: Optional[str] = Query(None)
 ):
+    """
+    Chỉ dành cho Admin: Lấy danh sách các mô hình Gemini khả dụng thông qua Google API.
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -198,7 +219,7 @@ async def admin_get_ai_models(
         config = get_ai_settings()
         key_to_use = config.get("api_key")
         
-    # Fallback default models if no key
+    # Danh sách mô hình dự phòng nếu không có API Key
     fallback_models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.5-flash"]
     if not key_to_use:
         return {"models": fallback_models}
@@ -236,6 +257,9 @@ async def admin_test_ai_config(
     test_in: AITestRequest,
     current_user: Annotated[User, Depends(get_current_user)]
 ):
+    """
+    Chỉ dành cho Admin: Kiểm tra kết nối và tính hợp lệ của API Key Google Gemini.
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized")
     

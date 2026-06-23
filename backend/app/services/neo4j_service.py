@@ -162,90 +162,7 @@ class Neo4jService:
             logger.error(f"Error searching drugs: {e}")
             return []
 
-    def get_drug_detail(self, drug_name: str) -> Optional[dict[str, Any]]:
-        try:
-            query = """
-            MATCH (d:Drug)
-            WHERE toLower(trim(d.name)) = toLower(trim($name))
-               OR toLower(trim(coalesce(d.brand_name, ""))) = toLower(trim($name))
-               OR toLower(trim(coalesce(d.generic_name, ""))) = toLower(trim($name))
 
-            OPTIONAL MATCH (d)-[:CONTAINS]->(i:Ingredient)
-            WITH d,
-            collect(DISTINCT {
-                id: id(i),
-                name: i.name
-            }) AS ingredients
-
-            OPTIONAL MATCH (d)-[:MADE_BY]->(m:Manufacturer)
-            WITH d, ingredients,
-            collect(DISTINCT {
-                id: id(m),
-                name: m.name
-            }) AS manufacturers
-
-            OPTIONAL MATCH (d)-[:TREATS]->(dis:Disease)
-            WITH d, ingredients, manufacturers,
-            collect(DISTINCT {
-                id: id(dis),
-                name: dis.name
-            }) AS treated_diseases
-
-            OPTIONAL MATCH (d)-[int:INTERACTS_WITH]-(other:Drug)
-            WITH d, ingredients, manufacturers, treated_diseases,
-            collect(DISTINCT {
-                id: id(other),
-                name: other.name,
-                severity: int.severity,
-                description: int.description
-            }) AS interactions
-
-            RETURN {
-                id: id(d),
-                name: d.name,
-                brand_name: d.brand_name,
-                generic_name: d.generic_name,
-                purpose: d.purpose,
-                indications: d.indications,
-                warnings: d.warnings,
-                dosage: d.dosage,
-                contraindications: d.contraindications,
-                adverse_reactions: d.adverse_reactions,
-                ingredients: ingredients,
-                manufacturers: manufacturers,
-                treated_diseases: treated_diseases,
-                interactions: interactions
-            } AS detail
-            """
-            results = self._repository.execute_read(query, name=drug_name)
-            
-            logger.info(f"Neo4j query (drug) results count: {len(results)}")
-            if not results:
-                return None
-
-            detail = dict(results[0]["detail"])
-            logger.info(f"Neo4j detail keys: {list(detail.keys())}")
-                
-            detail["ingredients"] = [
-                item for item in detail.get("ingredients", []) if item and item.get("name")
-            ]
-            detail["manufacturers"] = [
-                item for item in detail.get("manufacturers", []) if item and item.get("name")
-            ]
-            detail["interactions"] = [
-                item
-                for item in detail.get("interactions", [])
-                if item and item.get("name")
-            ]
-            detail["treated_diseases"] = [
-                item
-                for item in detail.get("treated_diseases", [])
-                if item and item.get("name")
-            ]
-            return detail
-        except Exception as e:
-            logger.error(f"Error getting drug detail for '{drug_name}': {e}")
-            return None
 
     # ============================================
     # THAO TÁC TRÊN BỆNH LÝ (DISEASES)
@@ -272,47 +189,7 @@ class Neo4jService:
             logger.error(f"Error searching diseases: {e}")
             return []
 
-    def get_disease_symptoms(self, disease_name: str) -> Optional[dict[str, Any]]:
-        try:
-            query = """
-            MATCH (d:Disease)
-            WHERE toLower(trim(d.name)) = toLower(trim($name))
-            OPTIONAL MATCH (d)-[:HAS_SYMPTOM|RELATED_TO]->(s:Symptom)
-            WITH d, collect(distinct {id: id(s), name: s.name}) AS symptoms
-            OPTIONAL MATCH (drug:Drug)-[:TREATS]->(d)
-            RETURN {
-                id: id(d),
-                name: d.name,
-                description: d.description,
-                symptoms: symptoms,
-                treating_drugs: collect(distinct {id: id(drug), name: drug.name})
-            } AS disease
-            """
-            results = self._repository.execute_read(query, name=disease_name)
-            
-            logger.info(f"Neo4j query (disease) results count: {len(results)}")
-            if not results:
-                return None
-                
-            disease = results[0].get("disease")
-            logger.info(f"Raw Neo4j disease type: {type(disease)}")
-            
-            # Robust conversion to dict
-            if disease is not None:
-                disease = dict(disease)
-            else:
-                return None
-                
-            disease["symptoms"] = [
-                item for item in disease.get("symptoms", []) if item and item.get("name")
-            ]
-            disease["treating_drugs"] = [
-                item for item in disease.get("treating_drugs", []) if item and item.get("name")
-            ]
-            return disease
-        except Exception as e:
-            logger.error(f"Error getting disease symptoms for '{disease_name}': {e}")
-            return None
+
 
     def get_subgraph_context(self, drug_names: list[str], disease_names: list[str]) -> list[dict[str, Any]]:
         """

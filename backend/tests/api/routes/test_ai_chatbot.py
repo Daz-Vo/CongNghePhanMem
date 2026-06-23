@@ -21,9 +21,9 @@ def test_chat_interaction_no_auth(mock_llm):
 
 @patch("app.services.llm_service.llm_service.generate_response")
 @patch("app.services.ner_service.ner_service.extract_entities")
-@patch("app.services.neo4j_service.neo4j_service.get_drug_detail")
+@patch("app.services.neo4j_service.neo4j_service.get_subgraph_context")
 def test_chat_drug_lookup(
-    mock_drug_detail, 
+    mock_subgraph, 
     mock_ner, 
     mock_llm, 
     client: TestClient, 
@@ -33,17 +33,18 @@ def test_chat_drug_lookup(
     # Mock NER
     mock_ner.return_value = {"drugs": ["Paracetamol"], "diseases": []}
     
-    # Mock Neo4j
-    mock_drug_detail.return_value = {
+    # Mock Neo4j Subgraph
+    mock_subgraph.return_value = [{
         "name": "Paracetamol",
+        "type": "drug",
         "generic_name": "Acetaminophen",
         "purpose": "Giảm đau, hạ sốt",
         "indications": "Đau đầu, sốt",
         "dosage": "500mg mỗi 4-6 giờ",
         "warnings": "Không dùng quá 4g mỗi ngày",
-        "ingredients": [{"name": "Paracetamol"}],
-        "manufacturers": [{"name": "Generic"}]
-    }
+        "ingredients": ["Paracetamol"],
+        "manufacturers": ["Generic"]
+    }]
     
     # Mock LLM
     mock_llm.return_value = "Paracetamol là thuốc giảm đau hạ sốt phổ biến."
@@ -85,11 +86,9 @@ def test_chat_unknown_entity(
 
 @patch("app.services.llm_service.llm_service.generate_response")
 @patch("app.services.ner_service.ner_service.extract_entities")
-@patch("app.services.neo4j_service.neo4j_service.check_drug_interactions")
-@patch("app.services.neo4j_service.neo4j_service.get_drug_detail")
+@patch("app.services.neo4j_service.neo4j_service.get_subgraph_context")
 def test_chat_drug_interaction(
-    mock_drug_detail,
-    mock_interactions,
+    mock_subgraph,
     mock_ner, 
     mock_llm, 
     client: TestClient, 
@@ -97,14 +96,27 @@ def test_chat_drug_interaction(
 ):
     """Test interaction check between two drugs."""
     mock_ner.return_value = {"drugs": ["DrugA", "DrugB"], "diseases": []}
-    mock_drug_detail.side_effect = lambda x: {"name": x}
     
-    mock_interactions.return_value = [{
-        "drug_1": "DrugA",
-        "drug_2": "DrugB",
-        "severity": "High",
-        "description": "Serious interaction"
-    }]
+    mock_subgraph.return_value = [
+        {
+            "name": "DrugA",
+            "type": "drug",
+            "interactions": [{
+                "name": "DrugB",
+                "severity": "High",
+                "description": "Serious interaction"
+            }]
+        },
+        {
+            "name": "DrugB",
+            "type": "drug",
+            "interactions": [{
+                "name": "DrugA",
+                "severity": "High",
+                "description": "Serious interaction"
+            }]
+        }
+    ]
     
     mock_llm.return_value = "DrugA and DrugB have a high severity interaction."
 
@@ -116,7 +128,7 @@ def test_chat_drug_interaction(
     
     assert response.status_code == 200
     data = response.json()
-    assert "Neo4j: Drug Interactions" in data["sources"]
+    assert "Neo4j: Drug(DrugA)" in data["sources"]
     assert any("Tương tác (High)" in w for w in data["warnings"])
 
 @patch("app.services.llm_service.llm_service.detect_language")

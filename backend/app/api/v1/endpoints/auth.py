@@ -75,6 +75,10 @@ def forgot_password(
     request: ForgotPasswordRequest,
     db: Session = Depends(get_db),
 ):
+    """
+    Mục đích: Yêu cầu đặt lại mật khẩu bằng cách gửi email chứa liên kết khôi phục (nếu email tồn tại).
+    Cơ chế hoạt động: Kiểm tra email, tạo mã token khôi phục, gửi email qua dịch vụ SMTP (nếu cấu hình) và ghi nhận log.
+    """
     user = user_repository.get_user_by_email(db, email=request.email)
     if user:
         token = generate_password_reset_token(str(user.email))
@@ -105,6 +109,10 @@ def reset_password(
     request: ResetPasswordRequest,
     db: Session = Depends(get_db),
 ):
+    """
+    Mục đích: Đặt lại mật khẩu mới cho tài khoản người dùng sau khi xác thực mã token khôi phục thành công.
+    Cơ chế hoạt động: Kiểm tra tính hợp lệ của token, lấy tài khoản người dùng tương ứng, cập nhật mật khẩu mới và lưu vào cơ sở dữ liệu.
+    """
     email = verify_password_reset_token(request.token)
     if not email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token")

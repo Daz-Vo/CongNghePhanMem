@@ -181,19 +181,7 @@ class MedicineRepository:
             logger.error(f"Error getting ingredients for medicine '{name}': {exc}")
             return []
 
-    def get_medicine_count(self) -> int:
-        """
-        Lấy tổng số lượng thuốc trong cơ sở dữ liệu.
-        """
-        query = "MATCH (m:Drug) RETURN COUNT(m) AS count"
-        try:
-            results = self._repository.execute_read(query)
-            if results:
-                return results[0].get("count", 0)
-            return 0
-        except Exception as exc:
-            logger.error(f"Error counting medicines: {exc}")
-            return 0
+
 
     def create_medicine(self, data: dict[str, Any]) -> dict[str, Any] | None:
         """Tạo một nút thuốc mới."""

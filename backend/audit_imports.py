@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 # Add the backend directory to sys.path
-backend_path = Path("/home/tandat/Desktop/CongNghePhanMem/backend").absolute()
+backend_path = Path(__file__).parent.absolute()
 sys.path.append(str(backend_path))
 
 def audit_imports():
@@ -16,9 +16,9 @@ def audit_imports():
         "app.api.v1.endpoints.debug",
         "app.api.v1.endpoints.chat",
         "app.api.v1.endpoints.users",
-        "app.api.v1.endpoints.drugs",
+        "app.api.v1.endpoints.medicines",
         "app.api.v1.endpoints.diseases",
-        "app.api.v1.endpoints.favorites",
+        "app.api.v1.endpoints.bookmarks",
         "app.repositories.user_repository",
         "app.repositories.drug_repository",
         "app.repositories.disease_repository",
